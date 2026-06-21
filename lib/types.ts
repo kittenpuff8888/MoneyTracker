@@ -28,6 +28,7 @@ export type Profile = {
   avatar_url: string | null;
   weekly_report_enabled: boolean;
   weekly_report_day: string;
+  last_weekly_report_sent_at: string | null;
   created_at: string;
 };
 
@@ -100,6 +101,21 @@ export type Goal = {
   created_at: string;
 };
 
+export type EmailReportLog = {
+  id: string;
+  user_id: string;
+  report_type: string;
+  period_start: string;
+  period_end: string;
+  recipient_email: string;
+  status: "sent" | "failed" | "skipped";
+  error_message: string | null;
+  resend_id: string | null;
+  attempts: number;
+  sent_at: string | null;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -149,6 +165,18 @@ export type Database = {
         Row: Goal;
         Insert: Partial<Omit<Goal, "id" | "created_at">> & { user_id: string; name: string; target_amount: number };
         Update: Partial<Omit<Goal, "id" | "user_id" | "created_at">>;
+        Relationships: [];
+      };
+      email_report_logs: {
+        Row: EmailReportLog;
+        Insert: Partial<Omit<EmailReportLog, "id" | "created_at">> & {
+          user_id: string;
+          period_start: string;
+          period_end: string;
+          recipient_email: string;
+          status: "sent" | "failed" | "skipped";
+        };
+        Update: Partial<Omit<EmailReportLog, "id" | "user_id" | "created_at">>;
         Relationships: [];
       };
     };

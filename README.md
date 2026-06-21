@@ -15,6 +15,7 @@ The UI is intentionally white, light blue, and sky blue, with dense modular fina
 - Net balance, savings ratio, burn rate, remaining balance, overspending, budget warnings, subscriptions, charts, goals, and transaction history
 - Equity allocation, gain/loss, and asset list
 - Weekly and monthly reports with email preview
+- Downloadable monthly PDF report
 - Vercel Cron endpoint for weekly Resend email reports
 - AI budgeting endpoint with rule-based fallback when `AI_API_KEY` is missing
 
@@ -144,15 +145,19 @@ Set `AI_API_KEY` on the server. If it is missing, `lib/ai.ts` generates a rule-b
 ```json
 {
   "path": "/api/cron/weekly-report",
-  "schedule": "0 1 * * 0"
+  "schedule": "0 12 * * 0"
 }
 ```
 
-It runs every Sunday at 01:00 UTC. If `CRON_SECRET` is configured, call the endpoint with:
+Vercel cron schedules are UTC. `0 12 * * 0` runs every Sunday at 12:00 UTC, which is Sunday 19:00 in Asia/Jakarta.
+
+Vercel invokes cron jobs with a `vercel-cron/1.0` user agent. Manual calls can also be protected with `CRON_SECRET`:
 
 ```http
 Authorization: Bearer YOUR_CRON_SECRET
 ```
+
+Weekly emails are sent to `profiles.email`, which is populated from the user's Gmail/Supabase auth profile. Set `RESEND_API_KEY` in Vercel before expecting real email delivery.
 
 ## Screens and Pages
 
@@ -167,3 +172,4 @@ Authorization: Bearer YOUR_CRON_SECRET
 - `/settings` profile, report preferences, IDR currency lock, logout
 - `/api/ai/budget-insight` authenticated AI insight endpoint
 - `/api/cron/weekly-report` cron-friendly weekly report sender
+- `/api/reports/monthly-pdf` protected monthly PDF download

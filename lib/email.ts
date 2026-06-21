@@ -38,6 +38,8 @@ export async function sendWeeklyReportEmail({
       </ul>
       <h2>Top Spending</h2>
       <ol>${insight.topCategories.map((item) => `<li>${item.category} - ${formatIDR(item.amount)}</li>`).join("")}</ol>
+      <h2>Overspending Warnings</h2>
+      <ul>${insight.overspendingWarnings.map((item) => `<li>${item.category} increased by ${Math.round(item.increase)}% (${formatIDR(item.amount)} this week)</li>`).join("") || "<li>No overspending spikes detected this week.</li>"}</ul>
       <h2>Subscriptions Due Soon</h2>
       <ul>${subscriptionsDue.map((item) => `<li>${item.name} - ${formatIDR(item.amount)}</li>`).join("") || "<li>No subscriptions due soon.</li>"}</ul>
       <h2>AI Conclusion</h2>

@@ -7,8 +7,12 @@ create table if not exists profiles (
   avatar_url text,
   weekly_report_enabled boolean default true,
   weekly_report_day text default 'sunday',
+  last_weekly_report_sent_at timestamptz,
   created_at timestamptz default now()
 );
+
+alter table profiles
+add column if not exists last_weekly_report_sent_at timestamptz;
 
 create table if not exists accounts (
   id uuid primary key default gen_random_uuid(),
@@ -79,12 +83,29 @@ create table if not exists goals (
   created_at timestamptz default now()
 );
 
+create table if not exists email_report_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  report_type text not null default 'weekly',
+  period_start date not null,
+  period_end date not null,
+  recipient_email text not null,
+  status text not null check (status in ('sent', 'failed', 'skipped')),
+  error_message text,
+  resend_id text,
+  attempts integer not null default 1,
+  sent_at timestamptz default now(),
+  created_at timestamptz default now()
+);
+
 create index if not exists accounts_user_id_idx on accounts(user_id);
 create index if not exists transactions_user_id_date_idx on transactions(user_id, transaction_date desc);
 create index if not exists budgets_user_id_idx on budgets(user_id);
 create index if not exists subscriptions_user_id_billing_idx on subscriptions(user_id, billing_date);
 create index if not exists equity_assets_user_id_idx on equity_assets(user_id);
 create index if not exists goals_user_id_idx on goals(user_id);
+create index if not exists email_report_logs_user_sent_idx on email_report_logs(user_id, sent_at desc);
+create index if not exists email_report_logs_status_idx on email_report_logs(status);
 
 alter table profiles enable row level security;
 alter table accounts enable row level security;
@@ -93,6 +114,7 @@ alter table budgets enable row level security;
 alter table subscriptions enable row level security;
 alter table equity_assets enable row level security;
 alter table goals enable row level security;
+alter table email_report_logs enable row level security;
 
 drop policy if exists "Users can view own profile" on profiles;
 drop policy if exists "Users can insert own profile" on profiles;
@@ -154,6 +176,11 @@ create policy "Users can view own goals" on goals for select using (auth.uid() =
 create policy "Users can insert own goals" on goals for insert with check (auth.uid() = user_id);
 create policy "Users can update own goals" on goals for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "Users can delete own goals" on goals for delete using (auth.uid() = user_id);
+
+drop policy if exists "Users can view own email report logs" on email_report_logs;
+drop policy if exists "Users can insert own email report logs" on email_report_logs;
+create policy "Users can view own email report logs" on email_report_logs for select using (auth.uid() = user_id);
+create policy "Users can insert own email report logs" on email_report_logs for insert with check (auth.uid() = user_id);
 
 create or replace function reverse_transaction_balance(p_transaction transactions)
 returns void

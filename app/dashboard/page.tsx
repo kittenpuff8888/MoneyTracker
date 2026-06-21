@@ -24,7 +24,7 @@ import {
   getUpcomingSubscriptions
 } from "@/lib/calculations";
 import { formatIDR, formatPercent } from "@/lib/formatters";
-import { generateBudgetInsight } from "@/lib/ai";
+import { generateBudgetInsightFromData } from "@/lib/ai";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardPage() {
@@ -34,13 +34,16 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
-  const [profileResult, accountsResult, transactionsResult, budgetsResult, subscriptionsResult, goalsResult] = await Promise.all([
+  const since = new Date();
+  since.setMonth(since.getMonth() - 6);
+  const [profileResult, accountsResult, transactionsResult, budgetsResult, subscriptionsResult, goalsResult, equityResult] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("accounts").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-    supabase.from("transactions").select("*").eq("user_id", user.id).order("transaction_date", { ascending: false }),
+    supabase.from("transactions").select("*").eq("user_id", user.id).gte("transaction_date", since.toISOString().slice(0, 10)).order("transaction_date", { ascending: false }),
     supabase.from("budgets").select("*").eq("user_id", user.id),
     supabase.from("subscriptions").select("*").eq("user_id", user.id).order("billing_date", { ascending: true }),
-    supabase.from("goals").select("*").eq("user_id", user.id).order("created_at", { ascending: false })
+    supabase.from("goals").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("equity_assets").select("*").eq("user_id", user.id)
   ]);
 
   const profile = profileResult.data;
@@ -49,6 +52,7 @@ export default async function DashboardPage() {
   const budgets = budgetsResult.data ?? [];
   const subscriptions = subscriptionsResult.data ?? [];
   const goals = goalsResult.data ?? [];
+  const equityAssets = equityResult.data ?? [];
 
   const income = calculateMonthlyIncome(transactions);
   const outcome = calculateMonthlyOutcome(transactions);
@@ -62,7 +66,7 @@ export default async function DashboardPage() {
   const spending = calculateSpendingByCategory(transactions);
   const trend = getMonthlyTrend(transactions);
   const upcomingSubscriptions = getUpcomingSubscriptions(subscriptions, 4);
-  const insight = await generateBudgetInsight(user.id, "monthly");
+  const insight = await generateBudgetInsightFromData({ accounts, transactions, budgets, subscriptions, equityAssets }, "monthly");
 
   return (
     <DashboardShell profile={profile}>
@@ -117,7 +121,15 @@ export default async function DashboardPage() {
             </Card>
             <Card>
               <CardHeader><CardTitle>Financial Health</CardTitle></CardHeader>
-              <CardContent><FinancialHealthGauge score={savingsRatio} /></CardContent>
+              <CardContent><FinancialHealthGauge score={insight.intelligence.financialHealthScore} /><p className="mt-4 text-sm leading-6 text-muted-foreground">{insight.intelligence.financialHealthExplanation}</p></CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle>Cash Flow Forecast</CardTitle></CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex justify-between"><span>Next 7 days</span><strong>{formatIDR(insight.intelligence.cashFlowForecast.next7Days)}</strong></div>
+                <div className="flex justify-between"><span>Next 30 days</span><strong>{formatIDR(insight.intelligence.cashFlowForecast.next30Days)}</strong></div>
+                <p className="leading-6 text-muted-foreground">{insight.intelligence.cashFlowForecast.explanation}</p>
+              </CardContent>
             </Card>
             <Card>
               <CardHeader><CardTitle>Goal Tracker</CardTitle></CardHeader>

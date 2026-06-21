@@ -22,7 +22,8 @@ export async function GET(request: Request) {
           full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
           avatar_url: user.user_metadata?.avatar_url ?? null,
           weekly_report_enabled: true,
-          weekly_report_day: "sunday"
+          weekly_report_day: "sunday",
+          last_weekly_report_sent_at: null
         });
       }
     }
