@@ -16,6 +16,7 @@ import {
   X
 } from "lucide-react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { UserGuideButton } from "@/components/guide/UserGuideButton";
 import { cn } from "@/lib/utils";
 
 const primaryItems = [
@@ -47,6 +48,8 @@ export function MobileNav() {
 
   return (
     <>
+      <UserGuideButton variant="floating" />
+
       {pathname !== "/transactions" ? (
         <Link
           href="/transactions"

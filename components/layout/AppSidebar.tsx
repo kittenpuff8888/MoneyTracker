@@ -14,6 +14,7 @@ import {
   WalletCards
 } from "lucide-react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { UserGuideButton } from "@/components/guide/UserGuideButton";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -71,6 +72,7 @@ export function AppSidebar() {
             Automated IDR summaries can be sent from Vercel Cron through Resend.
           </p>
         </div>
+        <UserGuideButton variant="sidebar" />
         <LogoutButton compact />
       </div>
     </aside>
