@@ -10,7 +10,13 @@ export default async function AccountsPage() {
   const [profileResult, accountsResult, transactionsResult] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("accounts").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-    supabase.from("transactions").select("*").eq("user_id", user.id).order("transaction_date", { ascending: false })
+    supabase
+      .from("transactions")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("type", "transfer")
+      .order("transaction_date", { ascending: false })
+      .limit(5)
   ]);
 
   return (

@@ -21,7 +21,7 @@ export default async function SettingsPage() {
           <CardContent className="text-center">
             {profile.avatar_url ? <Image src={profile.avatar_url} alt={profile.full_name ?? "Avatar"} width={96} height={96} className="mx-auto rounded-full" /> : <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-sky-100 text-3xl font-bold text-sky-700">{(profile.full_name ?? profile.email ?? "U").slice(0, 1)}</div>}
             <h2 className="mt-4 text-xl font-bold">{profile.full_name}</h2>
-            <p className="text-sm text-muted-foreground">{profile.email}</p>
+            <p className="break-all text-sm text-muted-foreground">{profile.email}</p>
             <div className="mt-6"><LogoutButton /></div>
           </CardContent>
         </Card>

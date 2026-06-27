@@ -24,7 +24,12 @@ export function TransactionsManager({ accounts, transactions }: { accounts: Acco
       {transactions.length === 0 ? (
         <EmptyState title="No transactions yet." description="Start by adding income, outcome, or transfer." />
       ) : (
-        <TransactionTable transactions={transactions} accounts={accounts} onEdit={setEditing} />
+        <div>
+          {transactions.length >= 100 ? (
+            <p className="mb-3 text-xs text-muted-foreground">Showing your latest 100 transactions for faster loading.</p>
+          ) : null}
+          <TransactionTable transactions={transactions} accounts={accounts} onEdit={setEditing} />
+        </div>
       )}
     </div>
   );

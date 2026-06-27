@@ -3,7 +3,7 @@ import { formatPercent } from "@/lib/formatters";
 export function FinancialHealthGauge({ score }: { score: number }) {
   const bounded = Math.max(0, Math.min(score, 100));
   return (
-    <div className="flex items-center gap-5">
+    <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
       <div
         className="grid h-28 w-28 place-items-center rounded-full"
         style={{

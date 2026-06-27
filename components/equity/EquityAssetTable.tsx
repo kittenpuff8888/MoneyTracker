@@ -12,8 +12,67 @@ export function EquityAssetTable({ assets, onEdit }: { assets: EquityAsset[]; on
   const [pending, startTransition] = useTransition();
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-white">
-      <div className="overflow-x-auto">
+    <>
+      <div className="grid gap-3 md:hidden">
+        {assets.map((asset) => {
+          const gain = calculateEquityGainLoss(asset);
+          return (
+            <article key={asset.id} className="rounded-lg border border-border bg-white p-4 shadow-card">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="truncate text-base font-semibold">{asset.name}</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">{asset.symbol ?? asset.asset_type}</p>
+                </div>
+                <p className={gain.gainLoss >= 0 ? "text-right text-sm font-bold text-emerald-600" : "text-right text-sm font-bold text-red-600"}>
+                  {formatPercent(gain.gainLossPercent)}
+                </p>
+              </div>
+              <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-3 text-xs">
+                <div>
+                  <dt className="text-muted-foreground">Invested</dt>
+                  <dd className="mt-1 font-semibold">{formatIDR(asset.amount_invested)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Current value</dt>
+                  <dd className="mt-1 font-semibold">{formatIDR(asset.current_value)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Gain/loss</dt>
+                  <dd className={gain.gainLoss >= 0 ? "mt-1 font-semibold text-emerald-600" : "mt-1 font-semibold text-red-600"}>
+                    {formatIDR(gain.gainLoss)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Quantity</dt>
+                  <dd className="mt-1 font-semibold">{asset.quantity}</dd>
+                </div>
+              </dl>
+              <div className="mt-4 flex justify-end gap-2">
+                <Button
+                  variant="secondary"
+                  aria-label={`Edit ${asset.name}`}
+                  className="h-11 w-11 px-0"
+                  onClick={() => onEdit?.(asset)}
+                >
+                  <Pencil size={16} />
+                </Button>
+                <Button
+                  variant="danger"
+                  aria-label={`Delete ${asset.name}`}
+                  className="h-11 w-11 px-0"
+                  disabled={pending}
+                  onClick={() => startTransition(async () => deleteEquityAsset(asset.id))}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <div className="hidden overflow-hidden rounded-lg border border-border bg-white md:block">
+        <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="bg-sky-50 text-xs uppercase text-muted-foreground">
             <tr>
@@ -64,7 +123,8 @@ export function EquityAssetTable({ assets, onEdit }: { assets: EquityAsset[]; on
             })}
           </tbody>
         </table>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

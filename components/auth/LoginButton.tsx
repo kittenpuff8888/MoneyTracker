@@ -34,8 +34,8 @@ export function LoginButton() {
   }
 
   return (
-    <div>
-      <Button onClick={signIn} disabled={loading} className="h-12 px-6">
+    <div className="w-full sm:w-auto">
+      <Button onClick={signIn} disabled={loading} className="h-12 w-full px-6 sm:w-auto">
         <Mail size={18} />
         {loading ? "Opening Google..." : "Continue with Google"}
       </Button>

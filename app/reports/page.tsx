@@ -1,25 +1,37 @@
 import { endOfMonth, endOfWeek, startOfMonth, startOfWeek } from "date-fns";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { AsyncInsightText } from "@/components/ai/AsyncInsightText";
 import { WeeklyReportPreview } from "@/components/reports/WeeklyReportPreview";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { calculateSavingsRatio, calculateSpendingByCategory } from "@/lib/calculations";
 import { formatIDR, formatPercent } from "@/lib/formatters";
-import { generateBudgetInsight } from "@/lib/ai";
+import { generateBudgetInsightFromData } from "@/lib/ai";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ReportsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/");
-  const [profileResult, transactionsResult, budgetsResult, insight] = await Promise.all([
+  const historyStart = new Date();
+  historyStart.setMonth(historyStart.getMonth() - 6);
+  const [profileResult, accountsResult, transactionsResult, budgetsResult, subscriptionsResult, equityResult] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
-    supabase.from("transactions").select("*").eq("user_id", user.id).order("transaction_date", { ascending: false }),
+    supabase.from("accounts").select("*").eq("user_id", user.id),
+    supabase.from("transactions").select("*").eq("user_id", user.id).gte("transaction_date", historyStart.toISOString().slice(0, 10)).order("transaction_date", { ascending: false }),
     supabase.from("budgets").select("*").eq("user_id", user.id),
-    generateBudgetInsight(user.id, "weekly")
+    supabase.from("subscriptions").select("*").eq("user_id", user.id).order("billing_date", { ascending: true }),
+    supabase.from("equity_assets").select("*").eq("user_id", user.id)
   ]);
   const transactions = transactionsResult.data ?? [];
+  const insight = await generateBudgetInsightFromData({
+    accounts: accountsResult.data ?? [],
+    transactions,
+    budgets: budgetsResult.data ?? [],
+    subscriptions: subscriptionsResult.data ?? [],
+    equityAssets: equityResult.data ?? []
+  }, "weekly");
   const now = new Date();
   const inRange = (start: Date, end: Date) => transactions.filter((item) => new Date(item.transaction_date) >= start && new Date(item.transaction_date) <= end);
   const weekly = inRange(startOfWeek(now, { weekStartsOn: 1 }), endOfWeek(now, { weekStartsOn: 1 }));
@@ -38,7 +50,7 @@ export default async function ReportsPage() {
           <Card><CardHeader><CardTitle>Monthly Summary</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><p>Income: <strong>{formatIDR(monthlyIncome)}</strong></p><p>Outcome: <strong>{formatIDR(monthlyOutcome)}</strong></p><p>Net Saved: <strong>{formatIDR(monthlyIncome - monthlyOutcome)}</strong></p><p>Savings Rate: <strong>{formatPercent(calculateSavingsRatio(monthlyIncome, monthlyOutcome))}</strong></p></CardContent></Card>
           <Card className="md:col-span-2"><CardHeader><CardTitle>Budget Warnings</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">{(budgetsResult.data ?? []).length ? "Budget warnings are calculated on the Budget page from current spending per category." : "No budgets yet. Create budgets to unlock category warnings."}</p></CardContent></Card>
           <Card className="md:col-span-2"><CardHeader><CardTitle>Overspending Warnings</CardTitle></CardHeader><CardContent className="space-y-2">{insight.overspendingWarnings.length ? insight.overspendingWarnings.map((item) => <p key={item.category} className="text-sm">{item.category} increased by <strong>{formatPercent(item.increase)}</strong> this week.</p>) : <p className="text-sm text-muted-foreground">No overspending spikes detected this week.</p>}</CardContent></Card>
-          <Card className="md:col-span-2"><CardHeader><CardTitle>AI Budget Conclusion</CardTitle></CardHeader><CardContent><p className="text-sm leading-6">{insight.conclusion}</p></CardContent></Card>
+          <Card className="md:col-span-2"><CardHeader><CardTitle>AI Budget Conclusion</CardTitle></CardHeader><CardContent><AsyncInsightText initialInsight={insight.conclusion} period="weekly" className="text-sm leading-6" /></CardContent></Card>
         </div>
         <WeeklyReportPreview income={weeklyIncome} outcome={weeklyOutcome} netSaved={weeklyIncome - weeklyOutcome} savingsRate={calculateSavingsRatio(weeklyIncome, weeklyOutcome)} topCategories={calculateSpendingByCategory(weekly)} insight={insight.conclusion} />
       </div>

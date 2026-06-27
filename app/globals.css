@@ -30,6 +30,7 @@ body {
   min-height: 100vh;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
+  text-rendering: optimizeLegibility;
 }
 
 button,
@@ -44,4 +45,19 @@ textarea {
     linear-gradient(rgba(14, 165, 233, 0.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(14, 165, 233, 0.08) 1px, transparent 1px);
   background-size: 32px 32px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

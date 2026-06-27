@@ -32,7 +32,7 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-72 shrink-0 border-r border-border bg-white px-4 py-5 lg:flex lg:flex-col">
+    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 overflow-y-auto border-r border-border bg-white px-3 py-5 md:flex md:flex-col xl:w-72 xl:px-4">
       <Link href="/dashboard" className="mb-8 flex items-center gap-3 px-2">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500 text-white">
           <PiggyBank size={21} />
@@ -64,8 +64,8 @@ export function AppSidebar() {
         })}
       </nav>
 
-      <div className="mt-auto space-y-4">
-        <div className="rounded-lg border border-sky-100 bg-sky-50 p-4">
+      <div className="mt-auto space-y-4 pt-6">
+        <div className="hidden rounded-lg border border-sky-100 bg-sky-50 p-4 xl:block">
           <p className="text-sm font-semibold">Weekly Reports</p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
             Automated IDR summaries can be sent from Vercel Cron through Resend.

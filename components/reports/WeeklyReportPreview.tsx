@@ -1,3 +1,4 @@
+import { AsyncInsightText } from "@/components/ai/AsyncInsightText";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { formatIDR, formatPercent } from "@/lib/formatters";
 import type { CategoryTotal } from "@/lib/calculations";
@@ -41,7 +42,7 @@ export function WeeklyReportPreview({
         </div>
         <div>
           <p className="font-semibold">AI Conclusion</p>
-          <p className="mt-1 leading-6 text-muted-foreground">{insight}</p>
+          <AsyncInsightText initialInsight={insight} period="weekly" className="mt-1 leading-6 text-muted-foreground" />
         </div>
       </CardContent>
     </Card>
