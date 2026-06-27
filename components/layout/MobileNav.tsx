@@ -23,13 +23,12 @@ const primaryItems = [
   { href: "/dashboard", label: "Home", icon: Gauge },
   { href: "/transactions", label: "Transactions", icon: CreditCard },
   { href: "/budget", label: "Budget", icon: PiggyBank },
-  { href: "/subscriptions", label: "Bills", icon: BarChart3 }
+  { href: "/accounts", label: "Wallet", icon: WalletCards }
 ];
 
 const moreItems = [
-  { href: "/accounts", label: "Accounts", icon: WalletCards },
+  { href: "/equity", label: "Investment Portfolio", icon: LineChart },
   { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/equity", label: "Equity Tracker", icon: LineChart },
   { href: "/settings", label: "Settings", icon: Settings }
 ];
 

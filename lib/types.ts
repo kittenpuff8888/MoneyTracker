@@ -1,7 +1,14 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type TransactionType = "income" | "outcome" | "transfer";
-export type AccountType = "Bank" | "Cash" | "E-wallet" | "Investment" | "Savings" | "Other";
+export type AccountType =
+  | "Bank"
+  | "Cash"
+  | "E-wallet"
+  | "E-Money"
+  | "Investment"
+  | "Savings"
+  | "Other";
 export type SubscriptionFrequency = "weekly" | "monthly" | "yearly" | "custom";
 export type EquityAssetType = "Stock" | "ETF" | "Mutual Fund" | "Crypto" | "Bond" | "Cash" | "Other";
 
@@ -28,7 +35,20 @@ export type Profile = {
   avatar_url: string | null;
   weekly_report_enabled: boolean;
   weekly_report_day: string;
+  report_frequency: ReportFrequency | string;
+  report_day: string;
+  report_time: string;
   last_weekly_report_sent_at: string | null;
+  created_at: string;
+};
+
+export type ReportFrequency = "daily" | "weekly" | "monthly";
+
+export type TransactionCategoryRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  kind: "income" | "outcome" | "transfer" | "all";
   created_at: string;
 };
 
@@ -49,6 +69,7 @@ export type Transaction = {
   user_id: string;
   type: TransactionType;
   amount: number;
+  fee: number;
   category: string;
   from_account_id: string | null;
   to_account_id: string | null;
@@ -209,6 +230,12 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      transaction_categories: {
+        Row: TransactionCategoryRow;
+        Insert: Partial<Omit<TransactionCategoryRow, "id" | "created_at">> & { user_id: string; name: string };
+        Update: Partial<Omit<TransactionCategoryRow, "id" | "user_id" | "created_at">>;
+        Relationships: [];
+      };
     };
     Views: {
       monthly_summary: {
@@ -227,6 +254,7 @@ export type Database = {
           p_user_id: string;
           p_type: TransactionType;
           p_amount: number;
+          p_fee?: number;
           p_category: string;
           p_from_account_id?: string | null;
           p_to_account_id?: string | null;
