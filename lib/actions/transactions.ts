@@ -23,6 +23,7 @@ export async function upsertTransaction(input: unknown) {
     p_user_id: user.id,
     p_type: parsed.type,
     p_amount: parsed.amount,
+    p_fee: parsed.fee ?? 0,
     p_category: parsed.category,
     p_from_account_id: parsed.from_account_id ?? null,
     p_to_account_id: parsed.to_account_id ?? null,

@@ -43,6 +43,12 @@ export function TransactionTable({
                 <dt className="text-muted-foreground">To</dt>
                 <dd className="mt-1 truncate font-medium">{accountName(transaction.to_account_id)}</dd>
               </div>
+              {Number(transaction.fee ?? 0) > 0 ? (
+                <div>
+                  <dt className="text-muted-foreground">Fee</dt>
+                  <dd className="mt-1 truncate font-medium">{formatIDR(transaction.fee)}</dd>
+                </div>
+              ) : null}
             </dl>
             {transaction.notes ? <p className="mt-3 break-words text-sm text-muted-foreground">{transaction.notes}</p> : null}
             <div className="mt-4 flex justify-end gap-2">
@@ -77,6 +83,7 @@ export function TransactionTable({
               <th className="px-4 py-3">To Account</th>
               <th className="px-4 py-3">Date</th>
               <th className="px-4 py-3">Amount</th>
+              <th className="px-4 py-3">Fee</th>
               <th className="px-4 py-3">Notes</th>
               <th className="px-4 py-3">Actions</th>
             </tr>
@@ -94,6 +101,7 @@ export function TransactionTable({
                 <td className="px-4 py-3 text-muted-foreground">{accountName(transaction.to_account_id)}</td>
                 <td className="px-4 py-3">{transaction.transaction_date}</td>
                 <td className="px-4 py-3 font-semibold">{formatIDR(transaction.amount)}</td>
+                <td className="px-4 py-3 text-muted-foreground">{Number(transaction.fee ?? 0) > 0 ? formatIDR(transaction.fee) : "-"}</td>
                 <td className="max-w-52 truncate px-4 py-3 text-muted-foreground">{transaction.notes ?? "-"}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">

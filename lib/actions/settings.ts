@@ -18,7 +18,11 @@ export async function updateSettings(input: unknown) {
     .update({
       full_name: parsed.full_name,
       weekly_report_enabled: parsed.weekly_report_enabled,
-      weekly_report_day: parsed.weekly_report_day
+      report_frequency: parsed.report_frequency,
+      report_day: parsed.report_day,
+      report_time: parsed.report_time,
+      // keep legacy column in sync for the existing weekly cron
+      weekly_report_day: parsed.report_frequency === "weekly" ? parsed.report_day : "sunday"
     })
     .eq("id", user.id);
 

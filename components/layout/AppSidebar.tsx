@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3,
   BellRing,
-  CalendarClock,
   CreditCard,
   Gauge,
   LineChart,
@@ -20,12 +18,10 @@ import { cn } from "@/lib/utils";
 
 const items = [
   { href: "/dashboard", label: "Dashboard", icon: Gauge },
-  { href: "/accounts", label: "Accounts", icon: WalletCards },
+  { href: "/accounts", label: "Wallet", icon: WalletCards },
   { href: "/transactions", label: "Transactions", icon: CreditCard },
-  { href: "/reports", label: "Cash Flow", icon: BarChart3 },
   { href: "/budget", label: "Budget", icon: PiggyBank },
-  { href: "/subscriptions", label: "Subscriptions", icon: CalendarClock },
-  { href: "/equity", label: "Equity Tracker", icon: LineChart },
+  { href: "/equity", label: "Investment Portfolio", icon: LineChart },
   { href: "/reports", label: "Reports", icon: BellRing },
   { href: "/settings", label: "Settings", icon: Settings }
 ];

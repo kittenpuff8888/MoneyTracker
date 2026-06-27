@@ -36,6 +36,7 @@ export function TransactionForm({
       id: transaction?.id,
       type: transaction?.type ?? "outcome",
       amount: transaction?.amount ?? 0,
+      fee: transaction?.fee ?? 0,
       category: (transaction?.category as TransactionFormValues["category"]) ?? "Lunch",
       from_account_id: transaction?.from_account_id ?? "",
       to_account_id: transaction?.to_account_id ?? "",
@@ -49,6 +50,7 @@ export function TransactionForm({
       id: transaction?.id,
       type: transaction?.type ?? "outcome",
       amount: transaction?.amount ?? 0,
+      fee: transaction?.fee ?? 0,
       category: (transaction?.category as TransactionFormValues["category"]) ?? "Lunch",
       from_account_id: transaction?.from_account_id ?? "",
       to_account_id: transaction?.to_account_id ?? "",
@@ -66,6 +68,7 @@ export function TransactionForm({
         reset({
           type: "outcome",
           amount: 0,
+          fee: 0,
           category: "Lunch",
           from_account_id: "",
           to_account_id: "",
@@ -93,7 +96,7 @@ export function TransactionForm({
         </label>
         <label className="grid gap-1 text-sm font-medium">
           Amount
-          <Input type="number" min="0" step="1000" {...register("amount")} />
+          <Input type="number" min="0" step="any" inputMode="decimal" {...register("amount")} />
           {errors.amount && <span className="text-xs text-red-600">{errors.amount.message}</span>}
         </label>
         <label className="grid gap-1 text-sm font-medium">
@@ -105,6 +108,14 @@ export function TransactionForm({
               </option>
             ))}
           </Select>
+        </label>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <label className="grid gap-1 text-sm font-medium">
+          {type === "income" ? "Fee (deducted from deposit)" : type === "transfer" ? "Transfer Fee" : "Fee"}
+          <Input type="number" min="0" step="any" inputMode="decimal" {...register("fee")} />
+          {errors.fee && <span className="text-xs text-red-600">{errors.fee.message}</span>}
         </label>
       </div>
 

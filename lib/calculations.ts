@@ -20,6 +20,33 @@ export function toNumber(value: number | string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+export type WalletRollup = {
+  income: number;
+  expense: number;
+};
+
+// Income = money flowing into the wallet (income deposits + incoming transfers).
+// Expense = money leaving the wallet (outcome + outgoing transfers) plus any fees
+// charged on transactions the wallet pays for.
+export function calculateWalletRollup(accountId: string, transactions: Transaction[]): WalletRollup {
+  let income = 0;
+  let expense = 0;
+  for (const t of transactions) {
+    const amount = toNumber(t.amount);
+    const fee = toNumber((t as Transaction).fee);
+    if (t.type === "income" && t.to_account_id === accountId) {
+      income += amount;
+      expense += fee; // fee on a deposit is debited from the receiving wallet
+    } else if (t.type === "outcome" && t.from_account_id === accountId) {
+      expense += amount + fee;
+    } else if (t.type === "transfer") {
+      if (t.from_account_id === accountId) expense += amount + fee;
+      if (t.to_account_id === accountId) income += amount;
+    }
+  }
+  return { income, expense };
+}
+
 export function calculateNetBalance(accounts: Account[]) {
   return accounts.reduce((sum, account) => sum + toNumber(account.current_balance), 0);
 }
