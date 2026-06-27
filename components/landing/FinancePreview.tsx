@@ -2,7 +2,7 @@ import { ArrowUpRight, Sparkles, WalletCards } from "lucide-react";
 
 export function FinancePreview() {
   return (
-    <div aria-label="Money Tracker dashboard preview" className="relative mx-auto w-full max-w-xl">
+    <div aria-label="8888 Tracker dashboard preview" className="relative mx-auto w-full max-w-xl">
       <div className="absolute inset-6 rounded-full bg-sky-100/80 blur-3xl" />
       <div className="relative grid grid-cols-2 gap-3 sm:gap-4">
         <div className="col-span-2 rounded-lg border border-sky-100 bg-white p-4 shadow-soft sm:p-5">

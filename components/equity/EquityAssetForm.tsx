@@ -3,6 +3,7 @@
 import { useEffect, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { Save } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { upsertEquityAsset } from "@/lib/actions/equity";
@@ -44,9 +45,14 @@ export function EquityAssetForm({ asset, onSaved }: { asset?: EquityAsset | null
 
   function onSubmit(values: EquityFormValues) {
     startTransition(async () => {
-      await upsertEquityAsset(values);
-      reset({ name: "", symbol: "", asset_type: "Stock", amount_invested: 0, current_value: 0, quantity: 0, notes: "" });
-      onSaved?.();
+      try {
+        await upsertEquityAsset(values);
+        reset({ name: "", symbol: "", asset_type: "Stock", amount_invested: 0, current_value: 0, quantity: 0, notes: "" });
+        onSaved?.();
+        toast.success(asset ? "Investment asset updated." : "Investment asset added.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to save investment asset.");
+      }
     });
   }
 

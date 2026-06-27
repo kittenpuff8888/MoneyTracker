@@ -1,3 +1,8 @@
+-- BASE SCHEMA ONLY.
+-- SECURITY REQUIREMENT: run supabase/migrations/002_security_hardening.sql
+-- immediately after this file. Do not expose a project created from this
+-- base schema until the hardening migration and live RLS test both pass.
+
 create extension if not exists pgcrypto;
 
 create table if not exists profiles (
@@ -326,3 +331,7 @@ begin
   delete from transactions where id = p_transaction_id and user_id = p_user_id;
 end;
 $$;
+
+-- Apply the same security hardening contained in:
+-- supabase/migrations/002_security_hardening.sql
+-- Existing projects must run that migration after this base schema.

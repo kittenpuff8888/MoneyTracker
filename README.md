@@ -1,175 +1,101 @@
-# Money Tracker
+# 8888 Tracker
 
-Money Tracker is a production-ready personal finance dashboard for Indonesian users. It uses Supabase Google Auth, Supabase PostgreSQL with Row Level Security, server-side transaction balance logic, Recharts, Resend weekly reports, and a server-side AI insight wrapper with a rule-based fallback.
+**Where Prosperity will Find you.**
 
-The UI is intentionally white, light blue, and sky blue, with dense modular finance widgets inspired by the supplied dashboard references.
+8888 Tracker is an IDR-first personal finance application built with Next.js, Supabase Auth/Postgres/RLS, Vercel, Resend, Recharts, and transaction-grounded AI insights.
 
-## Features
+## Core Features
 
-- Google/Gmail login with Supabase Auth
-- Protected dashboard routes
-- User-specific accounts, transactions, budgets, subscriptions, equity assets, goals, and reports
-- IDR-only currency formatting
-- Income, Outcome, and Transfer / Move Money transactions
-- Server-side balance updates through Supabase RPC
-- Net balance, savings ratio, burn rate, remaining balance, overspending, budget warnings, subscriptions, charts, goals, and transaction history
-- Equity allocation, gain/loss, and asset list
-- Weekly and monthly reports with email preview
-- Downloadable monthly PDF report
-- Vercel Cron endpoint for weekly Resend email reports
-- AI budgeting endpoint with rule-based fallback when `AI_API_KEY` is missing
-
-## Tech Stack
-
-- Next.js App Router
-- TypeScript
-- Tailwind CSS
-- Supabase Auth, PostgreSQL, and RLS
-- Recharts
-- React Hook Form
-- Zod
-- Resend
-- Lucide React
-- date-fns
-
-Best free tool stack: GitHub for source control, Codex for code generation, Cursor or VS Code for editing, Node.js LTS and npm locally, Supabase free tier for auth/database, Vercel free tier for hosting and cron, Resend free tier for email, Recharts and Lucide for UI.
+- Google authentication through Supabase
+- User-isolated accounts, transactions, budgets, subscriptions, investments, goals, reports, and audit logs
+- Atomic income, outcome, transfer, edit, and delete balance RPCs
+- IDR dashboard, category analysis, budgets, cash-flow forecasts, and PDF reports
+- User-specific AI insight with deterministic fallback and hourly rate limiting
+- Sunday 19:00 WIB weekly email reports with delivery logs and retry handling
+- Desktop sidebar, mobile bottom navigation, and in-app usage guide
 
 ## Local Setup
 
 ```bash
-npm install
-cp .env.example .env.local
-npm run dev
+pnpm install
+copy .env.example .env.local
+pnpm dev
 ```
 
-Open `http://localhost:3000`.
-
-## Environment Variables
+Required environment variables:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 RESEND_API_KEY=
+REPORT_FROM_EMAIL=8888 Tracker <reports@8888tracker.com>
 AI_API_KEY=
 CRON_SECRET=
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY` is required for the cron email route because it must fetch all profiles with weekly reports enabled. Never expose it to browser code.
+`SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `AI_API_KEY`, and `CRON_SECRET` are server-only secrets. Never prefix them with `NEXT_PUBLIC_`.
 
-## Supabase Setup
+## Mandatory Database Setup
 
-1. Create a Supabase project.
-2. Copy the project URL into `NEXT_PUBLIC_SUPABASE_URL`.
-3. Copy the anon key into `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-4. Copy the service role key into `SUPABASE_SERVICE_ROLE_KEY`.
-5. Open Supabase SQL Editor.
-6. Run `supabase/schema.sql`.
-7. Optional for development: adapt `supabase/seed.sql` with a real test auth user id.
+For a new project:
 
-## Google Auth Setup
+1. Run [`supabase/schema.sql`](supabase/schema.sql).
+2. Run [`supabase/migrations/002_security_hardening.sql`](supabase/migrations/002_security_hardening.sql).
+3. Run [`supabase/migrations/003_secure_dashboard_aggregates.sql`](supabase/migrations/003_secure_dashboard_aggregates.sql).
 
-In Supabase Dashboard:
+For the existing production project, run migrations `002` and `003` after confirming the base schema already exists.
 
-1. Go to Authentication, Providers, Google.
-2. Enable Google.
-3. Add your Google OAuth client id and secret.
-4. Add redirect URLs:
+Then verify:
 
-```txt
-http://localhost:3000/auth/callback
-https://your-vercel-domain.vercel.app/auth/callback
+```bash
+pnpm test:rls
 ```
 
-The app redirects successful auth to `/dashboard` and creates/updates a `profiles` row from Gmail metadata.
+The live RLS test creates two disposable confirmed users, proves cross-user reads/writes, aggregate-view leaks, and unsafe RPC calls are denied, validates ledger rebalance behavior, then deletes both users.
 
-## RLS Explanation
+## Quality Gates
 
-All user-owned tables have Row Level Security enabled:
-
-- `profiles.id = auth.uid()`
-- `accounts.user_id = auth.uid()`
-- `transactions.user_id = auth.uid()`
-- `budgets.user_id = auth.uid()`
-- `subscriptions.user_id = auth.uid()`
-- `equity_assets.user_id = auth.uid()`
-- `goals.user_id = auth.uid()`
-
-Every page query includes the authenticated `user.id`, and every RLS policy restricts select, insert, update, and delete to the same user.
-
-## Transaction Logic
-
-Transaction writes call `apply_transaction` in Supabase:
-
-- Income increases `to_account.current_balance`
-- Outcome decreases `from_account.current_balance`
-- Transfer decreases `from_account.current_balance` and increases `to_account.current_balance`
-- Transfer does not change total net worth
-- Editing a transaction reverses the old balance effect first, then applies the new one
-- Deleting a transaction reverses the balance effect
-
-The browser never calculates or mutates balances directly.
-
-## First Account
-
-1. Login with Gmail.
-2. Open `/accounts`.
-3. Create an account such as `Main Wallet`, `Bank Account`, or `E-wallet`.
-4. Open `/transactions`.
-5. Add income, outcome, or transfer records.
-6. Return to `/dashboard` to see personalized totals and charts.
-
-## Resend Setup
-
-1. Create a Resend API key.
-2. Add `RESEND_API_KEY` to `.env.local` and Vercel.
-3. For production, change the `from` address in `lib/email.ts` to a verified Resend domain.
-
-## AI Setup
-
-Set `AI_API_KEY` on the server. If it is missing, `lib/ai.ts` generates a rule-based conclusion, unusual-spending explanation, and 50/30/20 recommended budget.
-
-## Vercel Deployment
-
-1. Push this standalone project to a new GitHub repository, for example `money-tracker`.
-2. Import the repository in Vercel.
-3. Add all environment variables.
-4. Deploy.
-5. Add the production callback URL in Supabase Google Auth.
-
-## Vercel Cron
-
-`vercel.json` schedules:
-
-```json
-{
-  "path": "/api/cron/weekly-report",
-  "schedule": "0 12 * * 0"
-}
+```bash
+pnpm test
+pnpm type-check
+pnpm lint
+pnpm build
+pnpm audit --prod
 ```
 
-Vercel cron schedules are UTC. `0 12 * * 0` runs every Sunday at 12:00 UTC, which is Sunday 19:00 in Asia/Jakarta.
+No deployment is production-ready unless all commands pass and `pnpm test:rls` passes against the target Supabase project.
 
-Vercel invokes cron jobs with a `vercel-cron/1.0` user agent. Manual calls can also be protected with `CRON_SECRET`:
+## Security Model
 
-```http
-Authorization: Bearer YOUR_CRON_SECRET
-```
+- Every exposed user-data table has RLS enabled and forced.
+- Anonymous users have no public-table privileges.
+- Authenticated users can only select rows owned by `auth.uid()`.
+- Transaction writes are denied directly and must use identity-checked RPCs.
+- Internal balance helpers live in a non-exposed `private` schema.
+- User email is synchronized from Supabase Auth and cannot be directly changed through PostgREST.
+- User-facing AI reads through the signed-in user's RLS-bound Supabase client.
+- The service-role key is used only by the authenticated cron route.
+- Financial mutations create immutable user-visible audit records.
 
-Weekly emails are sent to `profiles.email`, which is populated from the user's Gmail/Supabase auth profile. Set `RESEND_API_KEY` in Vercel before expecting real email delivery.
+See [`docs/SECURITY.md`](docs/SECURITY.md) for the threat model and evidence.
 
-## Screens and Pages
+## Weekly Report
 
-- `/` landing and Google login
-- `/dashboard` financial overview
-- `/accounts` account management
-- `/transactions` income, outcome, and transfer management
-- `/budget` monthly category limits and warnings
-- `/subscriptions` recurring bills
-- `/equity` custom investment tracking
-- `/reports` weekly/monthly summaries and email preview
-- `/settings` profile, report preferences, IDR currency lock, logout
-- `/api/ai/budget-insight` authenticated AI insight endpoint
-- `/api/cron/weekly-report` cron-friendly weekly report sender
-- `/api/reports/monthly-pdf` protected monthly PDF download
+Vercel runs `/api/cron/weekly-report` at `0 12 * * 0`, which is Sunday 19:00 WIB. The endpoint fails closed when `CRON_SECRET` is absent and requires the exact Bearer token Vercel sends automatically.
+
+Set `REPORT_FROM_EMAIL` to a sender on a verified Resend domain before emailing users outside the Resend test account.
+
+## 8888Tracker.com
+
+The app is prepared for `https://8888tracker.com`, but the domain must be purchased and attached to Vercel by the domain owner. Follow [`docs/DEPLOYMENT_8888TRACKER.md`](docs/DEPLOYMENT_8888TRACKER.md).
+
+## Operations
+
+- [Security and RLS](docs/SECURITY.md)
+- [Backup and recovery](docs/BACKUP_AND_RECOVERY.md)
+- [Monitoring and incident response](docs/MONITORING.md)
+- [Performance](docs/PERFORMANCE.md)
+- [8888Tracker.com deployment](docs/DEPLOYMENT_8888TRACKER.md)
+- [Production readiness](docs/PRODUCTION_READINESS.md)

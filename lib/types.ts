@@ -108,12 +108,36 @@ export type EmailReportLog = {
   period_start: string;
   period_end: string;
   recipient_email: string;
-  status: "sent" | "failed" | "skipped";
+  status: "processing" | "sent" | "failed" | "skipped";
   error_message: string | null;
   resend_id: string | null;
   attempts: number;
   sent_at: string | null;
   created_at: string;
+};
+
+export type FinancialAuditLog = {
+  id: string;
+  user_id: string;
+  action: "INSERT" | "UPDATE" | "DELETE";
+  entity_type: string;
+  entity_id: string;
+  created_at: string;
+};
+
+export type MonthlySummary = {
+  user_id: string;
+  month: string;
+  total_income: number;
+  total_outcome: number;
+  net_saved: number;
+};
+
+export type CategoryMonthlySpending = {
+  user_id: string;
+  month: string;
+  category: string;
+  total_spent: number;
 };
 
 export type Database = {
@@ -174,13 +198,28 @@ export type Database = {
           period_start: string;
           period_end: string;
           recipient_email: string;
-          status: "sent" | "failed" | "skipped";
+          status: "processing" | "sent" | "failed" | "skipped";
         };
         Update: Partial<Omit<EmailReportLog, "id" | "user_id" | "created_at">>;
         Relationships: [];
       };
+      financial_audit_logs: {
+        Row: FinancialAuditLog;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
     };
-    Views: Record<string, never>;
+    Views: {
+      monthly_summary: {
+        Row: MonthlySummary;
+        Relationships: [];
+      };
+      category_monthly_spending: {
+        Row: CategoryMonthlySpending;
+        Relationships: [];
+      };
+    };
     Functions: {
       apply_transaction: {
         Args: {
@@ -201,6 +240,14 @@ export type Database = {
           p_transaction_id: string;
           p_user_id: string;
         };
+        Returns: void;
+      };
+      consume_ai_quota: {
+        Args: Record<never, never>;
+        Returns: boolean;
+      };
+      sync_profile_from_auth: {
+        Args: Record<never, never>;
         Returns: void;
       };
     };

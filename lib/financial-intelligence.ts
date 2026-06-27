@@ -204,7 +204,7 @@ function buildCategoryOptimizations(topCategories: { category: string; amount: n
   ));
 }
 
-function detectSubscriptionWaste({ subscriptions, income }: { subscriptions: Subscription[]; income: number }) {
+export function detectSubscriptionWaste({ subscriptions, income }: { subscriptions: Subscription[]; income: number }) {
   const duplicateNames = subscriptions
     .map((item) => item.name.toLowerCase())
     .filter((name, index, array) => array.indexOf(name) !== index);

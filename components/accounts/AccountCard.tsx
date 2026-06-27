@@ -1,16 +1,14 @@
 "use client";
 
-import { useTransition } from "react";
-import { Pencil, Trash2, Wallet } from "lucide-react";
+import { Pencil, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
+import { ConfirmDeleteButton } from "@/components/ui/ConfirmDeleteButton";
 import { deleteAccount } from "@/lib/actions/accounts";
 import { formatIDR } from "@/lib/formatters";
 import type { Account } from "@/lib/types";
 
 export function AccountCard({ account, onEdit }: { account: Account; onEdit?: (account: Account) => void }) {
-  const [pending, startTransition] = useTransition();
-
   return (
     <Card>
       <CardContent>
@@ -31,15 +29,12 @@ export function AccountCard({ account, onEdit }: { account: Account; onEdit?: (a
             <Pencil size={14} />
             Edit
           </Button>
-          <Button
-            variant="danger"
-            className="h-8 px-3"
-            disabled={pending}
-            onClick={() => startTransition(async () => deleteAccount(account.id))}
-          >
-            <Trash2 size={14} />
-            Delete
-          </Button>
+          <ConfirmDeleteButton
+            itemName={account.name}
+            successMessage="Account deleted."
+            warningText="The account can only be deleted when no transactions or subscriptions reference it."
+            onConfirm={() => deleteAccount(account.id)}
+          />
         </div>
       </CardContent>
     </Card>

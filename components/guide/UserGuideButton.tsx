@@ -89,8 +89,8 @@ export function UserGuideButton({ variant }: { variant: "sidebar" | "floating" }
       <button
         ref={triggerRef}
         type="button"
-        title="How to use Money Tracker"
-        aria-label="Open Money Tracker guide"
+        title="How to use 8888 Tracker"
+        aria-label="Open 8888 Tracker guide"
         aria-expanded={open}
         aria-controls={dialogId}
         onClick={() => setOpen(true)}
@@ -126,7 +126,7 @@ export function UserGuideButton({ variant }: { variant: "sidebar" | "floating" }
                   <BookOpen size={18} />
                   <p className="text-xs font-semibold uppercase">In-app guide</p>
                 </div>
-                <h2 id={headingId} className="text-xl font-bold sm:text-2xl">How to use Money Tracker</h2>
+                <h2 id={headingId} className="text-xl font-bold sm:text-2xl">How to use 8888 Tracker</h2>
                 <p className="mt-1 text-sm text-muted-foreground">Follow this order for the most accurate dashboard.</p>
               </div>
               <button

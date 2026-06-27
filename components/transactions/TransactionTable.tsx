@@ -1,9 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { ConfirmDeleteButton } from "@/components/ui/ConfirmDeleteButton";
 import { deleteTransaction } from "@/lib/actions/transactions";
 import { formatIDR } from "@/lib/formatters";
 import type { Account, Transaction } from "@/lib/types";
@@ -17,7 +17,6 @@ export function TransactionTable({
   accounts: Account[];
   onEdit?: (transaction: Transaction) => void;
 }) {
-  const [pending, startTransition] = useTransition();
   const accountName = (id: string | null) => accounts.find((account) => account.id === id)?.name ?? "-";
 
   return (
@@ -56,16 +55,12 @@ export function TransactionTable({
               >
                 <Pencil size={16} />
               </Button>
-              <Button
-                type="button"
-                variant="danger"
-                aria-label={`Delete ${transaction.category} transaction`}
-                className="h-11 w-11 px-0"
-                disabled={pending}
-                onClick={() => startTransition(async () => deleteTransaction(transaction.id))}
-              >
-                <Trash2 size={16} />
-              </Button>
+              <ConfirmDeleteButton
+                compact
+                itemName={`${transaction.category} transaction`}
+                successMessage="Transaction deleted and account balances updated."
+                onConfirm={() => deleteTransaction(transaction.id)}
+              />
             </div>
           </article>
         ))}
@@ -106,16 +101,11 @@ export function TransactionTable({
                       <Pencil size={14} />
                       Edit
                     </Button>
-                    <Button
-                      type="button"
-                      variant="danger"
-                      className="h-8 px-3"
-                      disabled={pending}
-                      onClick={() => startTransition(async () => deleteTransaction(transaction.id))}
-                    >
-                      <Trash2 size={14} />
-                      Delete
-                    </Button>
+                    <ConfirmDeleteButton
+                      itemName={`${transaction.category} transaction`}
+                      successMessage="Transaction deleted and account balances updated."
+                      onConfirm={() => deleteTransaction(transaction.id)}
+                    />
                   </div>
                 </td>
               </tr>

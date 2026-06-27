@@ -1,16 +1,14 @@
 "use client";
 
-import { useTransition } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDeleteButton } from "@/components/ui/ConfirmDeleteButton";
 import { deleteEquityAsset } from "@/lib/actions/equity";
 import { calculateEquityGainLoss } from "@/lib/calculations";
 import { formatIDR, formatPercent } from "@/lib/formatters";
 import type { EquityAsset } from "@/lib/types";
 
 export function EquityAssetTable({ assets, onEdit }: { assets: EquityAsset[]; onEdit?: (asset: EquityAsset) => void }) {
-  const [pending, startTransition] = useTransition();
-
   return (
     <>
       <div className="grid gap-3 md:hidden">
@@ -56,15 +54,12 @@ export function EquityAssetTable({ assets, onEdit }: { assets: EquityAsset[]; on
                 >
                   <Pencil size={16} />
                 </Button>
-                <Button
-                  variant="danger"
-                  aria-label={`Delete ${asset.name}`}
-                  className="h-11 w-11 px-0"
-                  disabled={pending}
-                  onClick={() => startTransition(async () => deleteEquityAsset(asset.id))}
-                >
-                  <Trash2 size={16} />
-                </Button>
+                <ConfirmDeleteButton
+                  compact
+                  itemName={asset.name}
+                  successMessage="Investment asset deleted."
+                  onConfirm={() => deleteEquityAsset(asset.id)}
+                />
               </div>
             </article>
           );
@@ -107,15 +102,11 @@ export function EquityAssetTable({ assets, onEdit }: { assets: EquityAsset[]; on
                         <Pencil size={14} />
                         Edit
                       </Button>
-                      <Button
-                        variant="danger"
-                        className="h-8 px-3"
-                        disabled={pending}
-                        onClick={() => startTransition(async () => deleteEquityAsset(asset.id))}
-                      >
-                        <Trash2 size={14} />
-                        Delete
-                      </Button>
+                      <ConfirmDeleteButton
+                        itemName={asset.name}
+                        successMessage="Investment asset deleted."
+                        onConfirm={() => deleteEquityAsset(asset.id)}
+                      />
                     </div>
                   </td>
                 </tr>

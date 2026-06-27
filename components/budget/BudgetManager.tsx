@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { ConfirmDeleteButton } from "@/components/ui/ConfirmDeleteButton";
 import { Select, Input } from "@/components/ui/Input";
 import { upsertBudget, deleteBudget } from "@/lib/actions/budgets";
 import { calculateBudgetUsage, type BudgetUsage } from "@/lib/calculations";
@@ -32,9 +34,14 @@ export function BudgetManager({ budgets, transactions }: { budgets: Budget[]; tr
 
   function onSubmit(values: BudgetValues) {
     startTransition(async () => {
-      await upsertBudget(values);
-      setEditing(null);
-      reset({ category: "Lunch", monthly_limit: 0 });
+      try {
+        await upsertBudget(values);
+        setEditing(null);
+        reset({ category: "Lunch", monthly_limit: 0 });
+        toast.success(editing ? "Budget updated." : "Budget added.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to save budget.");
+      }
     });
   }
 
@@ -68,7 +75,11 @@ export function BudgetManager({ budgets, transactions }: { budgets: Budget[]; tr
                 <div className="flex items-center gap-2">
                   <span className={item.percentUsed >= 90 ? "text-sm font-semibold text-red-600" : item.percentUsed >= 75 ? "text-sm font-semibold text-orange-600" : "text-sm font-semibold text-emerald-600"}>{formatPercent(item.percentUsed)}</span>
                   <Button variant="secondary" className="h-8 px-3" onClick={() => editBudget(item.budget)}><Pencil size={14} />Edit</Button>
-                  <Button variant="danger" className="h-8 px-3" onClick={() => startTransition(async () => deleteBudget(item.budget.id))}><Trash2 size={14} />Delete</Button>
+                  <ConfirmDeleteButton
+                    itemName={`${item.budget.category} budget`}
+                    successMessage="Budget deleted."
+                    onConfirm={() => deleteBudget(item.budget.id)}
+                  />
                 </div>
               </div>
               <div className="mt-3 h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-sky-500" style={{ width: `${Math.min(item.percentUsed, 100)}%` }} /></div>

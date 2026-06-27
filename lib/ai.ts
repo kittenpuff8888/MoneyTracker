@@ -1,6 +1,6 @@
 import { subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
-import { createClient as createSupabaseJsClient, type SupabaseClient } from "@supabase/supabase-js";
-import { createClient as createServerSupabase } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { generateFinancialIntelligence, type FinancialIntelligence } from "@/lib/financial-intelligence";
 import {
   calculateMonthlyIncome,
@@ -33,17 +33,17 @@ type FinanceData = {
   equityAssets: EquityAsset[];
 };
 
-function createServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createSupabaseJsClient<Database>(url, key, {
-    auth: { persistSession: false }
-  });
-}
+const AIOutputSchema = z.object({
+  insights: z.array(z.string().min(1).max(180)).min(3).max(5),
+  score: z.number().min(0).max(100).optional(),
+  warnings: z.array(z.string().min(1).max(180)).max(3).optional()
+});
 
-export async function generateBudgetInsight(userId: string, period: "weekly" | "monthly"): Promise<BudgetInsight> {
-  const supabase = createServiceClient() ?? (await createServerSupabase());
+export async function generateBudgetInsight(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  period: "weekly" | "monthly"
+): Promise<BudgetInsight> {
   const financeData = await fetchFinanceData(supabase, userId);
   return generateBudgetInsightFromData(financeData, period, { useExternalAi: true });
 }
@@ -73,7 +73,7 @@ export async function generateBudgetInsightFromData(
   const overspendingWarnings = detectOverspending(transactions).slice(0, 5);
   const intelligence = generateFinancialIntelligence({ accounts, transactions, budgets, subscriptions, equityAssets });
 
-  const fallback = buildFallbackInsight({ income, outcome, savingsRate, topCategories, unusual, overspendingWarnings, intelligence, subscriptions, budgets });
+  const fallback = buildFallbackInsight({ period, income, outcome, savingsRate, topCategories, unusual, overspendingWarnings, intelligence, subscriptions, budgets });
 
   if (!options.useExternalAi || !process.env.AI_API_KEY) return fallback;
 
@@ -93,52 +93,65 @@ export async function generateBudgetInsightFromData(
         messages: [
           {
             role: "system",
-            content: "You write concise, practical personal-finance recommendations for Indonesian users. Use IDR formatting and never mention USD."
+            content: [
+              "You create concise personal-finance insights in Bahasa Indonesia.",
+              "Use only the supplied user's financial data and IDR values.",
+              "Never invent transactions or amounts.",
+              "Return valid JSON with 3-5 short insights and optional warnings.",
+              "Do not include markdown or prose outside the JSON object."
+            ].join(" ")
           },
           {
             role: "user",
             content: JSON.stringify({
-              period,
-              income,
-              outcome,
-              savingsRate,
-              topCategories,
-              unusual,
-              overspendingWarnings,
-              financialHealthScore: intelligence.financialHealthScore,
-              financialHealthExplanation: intelligence.financialHealthExplanation,
-              spendingAnalysis: intelligence.spendingAnalysis,
-              savingsOpportunities: intelligence.savingsOpportunities,
-              categoryOptimizations: intelligence.categoryOptimizations,
-              cashFlowForecast: intelligence.cashFlowForecast,
-              subscriptionWaste: intelligence.subscriptionWaste,
-              equitySummary: intelligence.equitySummary,
-              nextWeekRecommendation: intelligence.nextWeekRecommendation,
-              nextMonthRecommendation: intelligence.nextMonthRecommendation,
-              budgets: budgets.map((budget) => ({
-                category: budget.category,
-                monthlyLimit: Number(budget.monthly_limit)
-              })),
-              subscriptions: subscriptions.map((subscription) => ({
-                name: subscription.name,
-                amount: Number(subscription.amount),
-                category: subscription.category,
-                billingDate: subscription.billing_date,
-                frequency: subscription.frequency
-              })),
-              recentTransactions: periodTransactions.slice(0, 25).map((transaction) => ({
-                type: transaction.type,
-                amount: Number(transaction.amount),
-                category: transaction.category,
-                date: transaction.transaction_date,
-                notes: transaction.notes
-              })),
-              subscriptionsTotal: subscriptions.reduce((sum, item) => sum + Number(item.amount), 0)
+              requiredOutput: {
+                insights: ["3-5 actionable strings grounded in the supplied data"],
+                score: "optional number from 0 to 100",
+                warnings: ["optional warning strings"]
+              },
+              financeContext: {
+                period,
+                income,
+                outcome,
+                savingsRate,
+                topCategories,
+                unusual,
+                overspendingWarnings,
+                financialHealthScore: intelligence.financialHealthScore,
+                financialHealthExplanation: intelligence.financialHealthExplanation,
+                spendingAnalysis: intelligence.spendingAnalysis,
+                savingsOpportunities: intelligence.savingsOpportunities,
+                categoryOptimizations: intelligence.categoryOptimizations,
+                cashFlowForecast: intelligence.cashFlowForecast,
+                subscriptionWaste: intelligence.subscriptionWaste,
+                equitySummary: intelligence.equitySummary,
+                nextWeekRecommendation: intelligence.nextWeekRecommendation,
+                nextMonthRecommendation: intelligence.nextMonthRecommendation,
+                budgets: budgets.map((budget) => ({
+                  category: budget.category,
+                  monthlyLimit: Number(budget.monthly_limit)
+                })),
+                subscriptions: subscriptions.map((subscription) => ({
+                  name: subscription.name,
+                  amount: Number(subscription.amount),
+                  category: subscription.category,
+                  billingDate: subscription.billing_date,
+                  frequency: subscription.frequency
+                })),
+                recentTransactions: periodTransactions.slice(0, 25).map((transaction) => ({
+                  type: transaction.type,
+                  amount: Number(transaction.amount),
+                  category: transaction.category,
+                  date: transaction.transaction_date
+                })),
+                subscriptionsTotal: subscriptions.reduce((sum, item) => sum + Number(item.amount), 0)
+              }
             })
           }
         ],
+        response_format: { type: "json_object" },
         temperature: 0.3,
-        max_tokens: 180
+        max_tokens: 300
       })
     });
 
@@ -146,7 +159,10 @@ export async function generateBudgetInsightFromData(
     const json = await response.json();
     const text = json.choices?.[0]?.message?.content as string | undefined;
     if (!text) return fallback;
-    return { ...fallback, conclusion: text.trim() };
+    const parsed = AIOutputSchema.safeParse(JSON.parse(text));
+    if (!parsed.success) return fallback;
+    const lines = [...parsed.data.insights, ...(parsed.data.warnings ?? [])].slice(0, 5);
+    return { ...fallback, conclusion: lines.map((line) => `- ${line}`).join("\n") };
   } catch {
     return fallback;
   } finally {
@@ -174,6 +190,7 @@ async function fetchFinanceData(supabase: SupabaseClient<Database>, userId: stri
 }
 
 function buildFallbackInsight({
+  period,
   income,
   outcome,
   savingsRate,
@@ -184,6 +201,7 @@ function buildFallbackInsight({
   subscriptions,
   budgets
 }: {
+  period: "weekly" | "monthly";
   income: number;
   outcome: number;
   savingsRate: number;
@@ -195,26 +213,27 @@ function buildFallbackInsight({
   budgets: Budget[];
 }): BudgetInsight {
   const highest = topCategories[0]?.category;
-  const unusualText = unusual.length ? `${unusual.join(", ")} increased recently.` : "No unusual spending spikes were detected.";
   const subscriptionTotal = subscriptions.reduce((sum, subscription) => sum + Number(subscription.amount), 0);
-  const base = savingsRate >= 20
-    ? "Your budgeting is stable this period."
-    : "Your savings rate is below the 20% target this period.";
-  const focus = highest ? `Keep ${highest} under control and reduce it by 15% next week.` : "Add more categorized transactions to unlock sharper recommendations.";
-  const subscriptionLine = subscriptionTotal > income * 0.15 && income > 0
-    ? "Your subscription cost is increasing; review unused services."
-    : "Subscription costs look manageable.";
-  const budgetLine = budgets.length ? "Your budget limits are active and ready for weekly monitoring." : "Create category budgets to receive 75%, 90%, and 100% usage warnings.";
-  const intelligenceLine = [
-    `Financial health score is ${intelligence.financialHealthScore}/100.`,
-    intelligence.spendingAnalysis[0],
-    intelligence.savingsOpportunities[0],
-    intelligence.cashFlowForecast.explanation,
-    intelligence.equitySummary.explanation
-  ].filter(Boolean).join(" ");
+  const lines = [
+    `Pemasukan ${formatIDR(income)}, pengeluaran ${formatIDR(outcome)}, dan rasio tabungan ${formatPercent(savingsRate)}.`,
+    highest
+      ? `Pengeluaran terbesar adalah ${highest} sebesar ${formatIDR(topCategories[0]?.amount ?? 0)}.`
+      : "Tambahkan transaksi berkategori agar analisis pengeluaran menjadi lebih tajam.",
+    unusual.length
+      ? `${unusual.join(", ")} meningkat dibanding pola belanja sebelumnya.`
+      : `Skor kesehatan keuangan saat ini ${intelligence.financialHealthScore}/100.`,
+    subscriptionTotal > income * 0.15 && income > 0
+      ? `Langganan mencapai ${formatIDR(subscriptionTotal)}; tinjau layanan yang jarang digunakan.`
+      : budgets.length
+        ? "Batas anggaran aktif dan siap memantau risiko pengeluaran berlebih."
+        : "Buat anggaran kategori untuk menerima peringatan penggunaan 75%, 90%, dan 100%.",
+    period === "weekly"
+      ? intelligence.nextWeekRecommendation
+      : intelligence.nextMonthRecommendation
+  ];
 
   return {
-    conclusion: `${base} Income is ${formatIDR(income)}, outcome is ${formatIDR(outcome)}, and savings rate is ${formatPercent(savingsRate)}. ${unusualText} ${focus} ${subscriptionLine} ${budgetLine} ${intelligenceLine} Recommended allocation: 50% needs, 30% wants, 20% saving/investing.`,
+    conclusion: lines.map((line) => `- ${line}`).join("\n"),
     recommendedBudget: {
       needs: income * 0.5,
       wants: income * 0.3,

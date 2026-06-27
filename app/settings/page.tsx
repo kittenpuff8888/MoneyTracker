@@ -10,7 +10,22 @@ export default async function SettingsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/");
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const [profileResult, auditResult, emailLogResult] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", user.id).single(),
+    supabase
+      .from("financial_audit_logs")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("email_report_logs")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(5)
+  ]);
+  const profile = profileResult.data;
   if (!profile) redirect("/auth/callback");
 
   return (
@@ -26,6 +41,39 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
         <Card><CardHeader><CardTitle>Preferences</CardTitle></CardHeader><CardContent><SettingsForm profile={profile} /></CardContent></Card>
+        <Card className="lg:col-span-2">
+          <CardHeader><CardTitle>Recent Account Activity</CardTitle></CardHeader>
+          <CardContent className="grid gap-6 lg:grid-cols-2">
+            <section>
+              <h3 className="text-sm font-semibold">Financial changes</h3>
+              <div className="mt-3 divide-y divide-border">
+                {(auditResult.data ?? []).length ? (auditResult.data ?? []).map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between gap-4 py-3 text-sm">
+                    <span><strong>{entry.action}</strong> {entry.entity_type.replaceAll("_", " ")}</span>
+                    <time className="shrink-0 text-xs text-muted-foreground">{new Date(entry.created_at).toLocaleDateString("id-ID")}</time>
+                  </div>
+                )) : (
+                  <p className="py-3 text-sm text-muted-foreground">
+                    No audit records yet. Records appear after the security migration is active.
+                  </p>
+                )}
+              </div>
+            </section>
+            <section>
+              <h3 className="text-sm font-semibold">Weekly report delivery</h3>
+              <div className="mt-3 divide-y divide-border">
+                {(emailLogResult.data ?? []).length ? (emailLogResult.data ?? []).map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between gap-4 py-3 text-sm">
+                    <span className="capitalize">{entry.status}</span>
+                    <time className="shrink-0 text-xs text-muted-foreground">{new Date(entry.created_at).toLocaleDateString("id-ID")}</time>
+                  </div>
+                )) : (
+                  <p className="py-3 text-sm text-muted-foreground">No weekly report deliveries yet.</p>
+                )}
+              </div>
+            </section>
+          </CardContent>
+        </Card>
       </div>
     </DashboardShell>
   );

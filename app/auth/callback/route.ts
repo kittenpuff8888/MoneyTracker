@@ -28,12 +28,10 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/?auth_error=user_missing", requestUrl.origin));
   }
 
-  await supabase.from("profiles").upsert({
-    id: user.id,
-    email: user.email ?? null,
-    full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
-    avatar_url: user.user_metadata?.avatar_url ?? null
-  });
+  const { error: profileError } = await supabase.rpc("sync_profile_from_auth");
+  if (profileError) {
+    return NextResponse.redirect(new URL("/?auth_error=profile_sync_failed", requestUrl.origin));
+  }
 
   return NextResponse.redirect(new URL(next, requestUrl.origin));
 }

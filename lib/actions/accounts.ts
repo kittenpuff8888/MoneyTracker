@@ -17,18 +17,21 @@ async function requireUser() {
 export async function upsertAccount(input: unknown) {
   const parsed = accountSchema.parse(input);
   const { supabase, user } = await requireUser();
-  const payload = {
+  const mutablePayload = {
     name: parsed.name,
     type: parsed.type,
-    starting_balance: parsed.starting_balance,
-    current_balance: parsed.current_balance,
     color: parsed.color || "#38bdf8",
     icon: parsed.icon || "wallet"
   };
 
   const query = parsed.id
-    ? supabase.from("accounts").update(payload).eq("id", parsed.id).eq("user_id", user.id)
-    : supabase.from("accounts").insert({ ...payload, user_id: user.id });
+    ? supabase.from("accounts").update(mutablePayload).eq("id", parsed.id).eq("user_id", user.id)
+    : supabase.from("accounts").insert({
+        ...mutablePayload,
+        user_id: user.id,
+        starting_balance: parsed.starting_balance,
+        current_balance: parsed.current_balance
+      });
 
   const { error } = await query;
   if (error) throw new Error(error.message);
@@ -38,6 +41,30 @@ export async function upsertAccount(input: unknown) {
 
 export async function deleteAccount(id: string) {
   const { supabase, user } = await requireUser();
+  const [transactionsResult, subscriptionsResult] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .or(`from_account_id.eq.${id},to_account_id.eq.${id}`),
+    supabase
+      .from("subscriptions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("account_id", id)
+  ]);
+
+  if (transactionsResult.error || subscriptionsResult.error) {
+    throw new Error("Unable to verify whether this account is in use.");
+  }
+
+  const referenceCount = (transactionsResult.count ?? 0) + (subscriptionsResult.count ?? 0);
+  if (referenceCount > 0) {
+    throw new Error(
+      `This account is used by ${referenceCount} transaction or subscription record(s). Move or delete those records first.`
+    );
+  }
+
   const { error } = await supabase.from("accounts").delete().eq("id", id).eq("user_id", user.id);
   if (error) throw new Error(error.message);
   revalidatePath("/accounts");

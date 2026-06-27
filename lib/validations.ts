@@ -75,5 +75,5 @@ export const equityAssetSchema = z.object({
 export const settingsSchema = z.object({
   full_name: z.string().min(1),
   weekly_report_enabled: z.coerce.boolean(),
-  weekly_report_day: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"])
+  weekly_report_day: z.literal("sunday")
 });

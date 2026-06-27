@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Bell, PiggyBank, Plus, Search, Settings } from "lucide-react";
+import { Bell, Plus, Search, Settings } from "lucide-react";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { Button } from "@/components/ui/Button";
 
 type AppTopbarProps = {
@@ -14,10 +15,8 @@ export function AppTopbar({ name, email, avatarUrl }: AppTopbarProps) {
     <header className="sticky top-0 z-20 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:px-6 md:py-4">
       <div className="flex items-center gap-3">
         <Link href="/dashboard" className="flex min-w-0 items-center gap-2 md:hidden">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sky-500 text-white">
-            <PiggyBank size={18} />
-          </span>
-          <span className="truncate text-sm font-bold">Money Tracker</span>
+          <BrandMark size={38} />
+          <span className="truncate text-sm font-bold">8888 Tracker</span>
         </Link>
         <div className="relative hidden min-w-0 flex-1 xl:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={17} />
@@ -48,7 +47,7 @@ export function AppTopbar({ name, email, avatarUrl }: AppTopbarProps) {
             </div>
           )}
           <div className="hidden max-w-40 truncate pr-1 text-xs lg:block">
-            <p className="truncate font-semibold">{name ?? "Money Tracker User"}</p>
+            <p className="truncate font-semibold">{name ?? "8888 Tracker User"}</p>
             <p className="truncate text-muted-foreground">{email}</p>
           </div>
         </Link>

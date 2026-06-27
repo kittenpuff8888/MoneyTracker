@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { ConfirmDeleteButton } from "@/components/ui/ConfirmDeleteButton";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { upsertSubscription, deleteSubscription } from "@/lib/actions/subscriptions";
 import { formatIDR } from "@/lib/formatters";
@@ -15,7 +17,15 @@ import type { z } from "zod";
 
 type SubscriptionValues = z.infer<typeof subscriptionSchema>;
 
-export function SubscriptionManager({ subscriptions, accounts }: { subscriptions: Subscription[]; accounts: Account[] }) {
+export function SubscriptionManager({
+  subscriptions,
+  accounts,
+  analysis
+}: {
+  subscriptions: Subscription[];
+  accounts: Account[];
+  analysis: string[];
+}) {
   const [editing, setEditing] = useState<Subscription | null>(null);
   const [pending, startTransition] = useTransition();
   const monthlyTotal = subscriptions.reduce((sum, item) => sum + Number(item.amount), 0);
@@ -40,9 +50,14 @@ export function SubscriptionManager({ subscriptions, accounts }: { subscriptions
 
   function onSubmit(values: SubscriptionValues) {
     startTransition(async () => {
-      await upsertSubscription(values);
-      setEditing(null);
-      reset({ name: "", amount: 0, billing_date: new Date().toISOString().slice(0, 10), category: "Subscription", account_id: "", frequency: "monthly", notes: "" });
+      try {
+        await upsertSubscription(values);
+        setEditing(null);
+        reset({ name: "", amount: 0, billing_date: new Date().toISOString().slice(0, 10), category: "Subscription", account_id: "", frequency: "monthly", notes: "" });
+        toast.success(editing ? "Subscription updated." : "Subscription added.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to save subscription.");
+      }
     });
   }
 
@@ -74,12 +89,24 @@ export function SubscriptionManager({ subscriptions, accounts }: { subscriptions
               <p className="font-bold">{formatIDR(subscription.amount)}</p>
               <div className="flex gap-2">
                 <Button variant="secondary" className="h-8 px-3" onClick={() => edit(subscription)}><Pencil size={14} />Edit</Button>
-                <Button variant="danger" className="h-8 px-3" onClick={() => startTransition(async () => deleteSubscription(subscription.id))}><Trash2 size={14} />Delete</Button>
+                <ConfirmDeleteButton
+                  itemName={subscription.name}
+                  successMessage="Subscription deleted."
+                  onConfirm={() => deleteSubscription(subscription.id)}
+                />
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+      <Card>
+        <CardHeader><CardTitle>Subscription Analysis</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {analysis.map((item) => (
+            <p key={item} className="text-sm leading-6 text-muted-foreground">{item}</p>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }

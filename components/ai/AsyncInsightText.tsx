@@ -48,5 +48,5 @@ export function AsyncInsightText({
     return () => controller.abort();
   }, [period]);
 
-  return <p aria-live="polite" className={className}>{insight}</p>;
+  return <p aria-live="polite" className={`whitespace-pre-line ${className ?? ""}`}>{insight}</p>;
 }

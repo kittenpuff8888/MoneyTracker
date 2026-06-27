@@ -3,6 +3,7 @@
 import { useEffect, useTransition } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { Save } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { upsertTransaction } from "@/lib/actions/transactions";
@@ -60,17 +61,22 @@ export function TransactionForm({
 
   function onSubmit(values: TransactionFormValues) {
     startTransition(async () => {
-      await upsertTransaction(values);
-      reset({
-        type: "outcome",
-        amount: 0,
-        category: "Lunch",
-        from_account_id: "",
-        to_account_id: "",
-        transaction_date: new Date().toISOString().slice(0, 10),
-        notes: ""
-      });
-      onSaved?.();
+      try {
+        await upsertTransaction(values);
+        reset({
+          type: "outcome",
+          amount: 0,
+          category: "Lunch",
+          from_account_id: "",
+          to_account_id: "",
+          transaction_date: new Date().toISOString().slice(0, 10),
+          notes: ""
+        });
+        onSaved?.();
+        toast.success(transaction ? "Transaction updated." : "Transaction added.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to save transaction.");
+      }
     });
   }
 

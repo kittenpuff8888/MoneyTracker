@@ -13,7 +13,10 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: { "Cache-Control": "private, no-store" } }
+    );
   }
 
   const now = new Date();
@@ -59,12 +62,14 @@ export async function GET() {
     insight.conclusion
   ];
 
-  const pdf = createSimplePdf("Money Tracker Monthly Report", lines);
+  const pdf = createSimplePdf("8888 Tracker Monthly Report", lines);
 
   return new NextResponse(pdf, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="money-tracker-monthly-report-${monthStart}.pdf"`
+      "Content-Disposition": `attachment; filename="8888-tracker-monthly-report-${monthStart}.pdf"`,
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff"
     }
   });
 }

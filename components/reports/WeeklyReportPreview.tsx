@@ -24,8 +24,8 @@ export function WeeklyReportPreview({
         <CardTitle>Email Preview</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
-        <p className="font-semibold">Your Weekly Money Tracker Report</p>
-        <p className="text-muted-foreground">Here is your weekly Money Tracker summary.</p>
+        <p className="font-semibold">Your Weekly 8888 Tracker Report</p>
+        <p className="text-muted-foreground">Here is your weekly 8888 Tracker summary.</p>
         <div className="grid gap-2 rounded-lg bg-sky-50 p-4">
           <p>Total Income: <strong>{formatIDR(income)}</strong></p>
           <p>Total Outcome: <strong>{formatIDR(outcome)}</strong></p>

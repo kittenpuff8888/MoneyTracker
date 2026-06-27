@@ -14,6 +14,7 @@ import {
   WalletCards
 } from "lucide-react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { UserGuideButton } from "@/components/guide/UserGuideButton";
 import { cn } from "@/lib/utils";
 
@@ -35,12 +36,10 @@ export function AppSidebar() {
   return (
     <aside className="sticky top-0 hidden h-screen w-60 shrink-0 overflow-y-auto border-r border-border bg-white px-3 py-5 md:flex md:flex-col xl:w-72 xl:px-4">
       <Link href="/dashboard" className="mb-8 flex items-center gap-3 px-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500 text-white">
-          <PiggyBank size={21} />
-        </div>
+        <BrandMark size={42} />
         <div>
-          <p className="text-lg font-bold">Money Tracker</p>
-          <p className="text-xs text-muted-foreground">IDR finance control</p>
+          <p className="text-lg font-bold">8888 Tracker</p>
+          <p className="max-w-40 text-xs leading-4 text-muted-foreground">Where Prosperity will Find you.</p>
         </div>
       </Link>
 
