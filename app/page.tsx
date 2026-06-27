@@ -18,7 +18,18 @@ const features = [
   { title: "IDR-First Personal Finance", icon: CreditCard }
 ];
 
-export default async function HomePage() {
+type HomePageProps = {
+  searchParams: Promise<{ auth_error?: string }>;
+};
+
+const authErrors: Record<string, string> = {
+  missing_code: "The login link is incomplete. Please try signing in again.",
+  exchange_failed: "That login attempt expired or came from another website address. Please try again.",
+  user_missing: "Login completed, but no user account was returned. Please try again."
+};
+
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const { auth_error: authError } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user }
@@ -41,6 +52,11 @@ export default async function HomePage() {
             <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
               Track income, outcome, transfers, subscriptions, savings, budgets, and investments in one intelligent IDR dashboard.
             </p>
+            {authError ? (
+              <p className="mt-5 max-w-xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {authErrors[authError] ?? "Login could not be completed. Please try again."}
+              </p>
+            ) : null}
             <div className="mt-8 flex flex-wrap gap-3">
               <LoginButton />
               <Link href="#demo">

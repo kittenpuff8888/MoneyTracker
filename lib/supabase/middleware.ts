@@ -14,6 +14,12 @@ const protectedRoutes = [
 ];
 
 export async function updateSession(request: NextRequest) {
+  if (request.nextUrl.pathname === "/" && request.nextUrl.searchParams.has("code")) {
+    const callbackUrl = request.nextUrl.clone();
+    callbackUrl.pathname = "/auth/callback";
+    return NextResponse.redirect(callbackUrl);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient<Database>(

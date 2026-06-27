@@ -7,23 +7,39 @@ import { Button } from "@/components/ui/Button";
 
 export function LoginButton() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function signIn() {
     setLoading(true);
+    setError(null);
     const supabase = createClient();
-    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
-    await supabase.auth.signInWithOAuth({
+    const callbackUrl = new URL("/auth/callback", window.location.origin);
+    const next = new URLSearchParams(window.location.search).get("next");
+
+    if (next?.startsWith("/") && !next.startsWith("//")) {
+      callbackUrl.searchParams.set("next", next);
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${origin}/auth/callback`
+        redirectTo: callbackUrl.toString()
       }
     });
+
+    if (signInError) {
+      setError(signInError.message);
+      setLoading(false);
+    }
   }
 
   return (
-    <Button onClick={signIn} disabled={loading} className="h-12 px-6">
-      <Mail size={18} />
-      {loading ? "Opening Google..." : "Continue with Google"}
-    </Button>
+    <div>
+      <Button onClick={signIn} disabled={loading} className="h-12 px-6">
+        <Mail size={18} />
+        {loading ? "Opening Google..." : "Continue with Google"}
+      </Button>
+      {error ? <p className="mt-2 max-w-sm text-sm text-red-600">{error}</p> : null}
+    </div>
   );
 }
