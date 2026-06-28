@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3,
+  BookOpen,
   CreditCard,
   Gauge,
   LineChart,
@@ -12,6 +12,7 @@ import {
   PiggyBank,
   Plus,
   Settings,
+  Target,
   WalletCards,
   X
 } from "lucide-react";
@@ -28,8 +29,9 @@ const primaryItems = [
 ];
 
 const moreItems = [
+  { href: "/goals", label: "Goals", icon: Target },
   { href: "/equity", label: "Investment Portfolio", icon: LineChart },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/guide", label: "Guide", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: Settings }
 ];
 

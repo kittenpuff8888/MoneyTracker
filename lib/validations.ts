@@ -99,6 +99,16 @@ export const settingsSchema = z.object({
     .default("08:00")
 });
 
+export const goalSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1, "Goal name is required").max(60),
+  wallet_id: z.string().uuid({ message: "Select a savings wallet" }),
+  category: z.string().optional().nullable(),
+  target_amount: z.coerce.number().positive("Target must be greater than 0"),
+  start_date: optionalDate,
+  deadline: optionalDate
+});
+
 export const categorySchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(1, "Category name is required").max(40),

@@ -143,6 +143,9 @@ export type Goal = {
   name: string;
   target_amount: number;
   current_amount: number;
+  wallet_id: string | null;
+  category: string | null;
+  start_date: string | null;
   deadline: string | null;
   created_at: string;
 };
@@ -323,6 +326,22 @@ export type Database = {
       };
       seed_default_categories: {
         Args: { p_user: string };
+        Returns: void;
+      };
+      upsert_goal: {
+        Args: {
+          p_id: string | null;
+          p_name: string;
+          p_wallet_id: string | null;
+          p_category: string | null;
+          p_target: number;
+          p_start: string | null;
+          p_deadline: string | null;
+        };
+        Returns: string;
+      };
+      delete_goal: {
+        Args: { p_id: string };
         Returns: void;
       };
     };

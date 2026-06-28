@@ -11,7 +11,8 @@ const overview: NavDef[] = [
   { href: "/transactions", label: "Transactions", paths: ["M3 6h18", "M7 12h10", "M10 18h4"] },
   { href: "/accounts", label: "Wallet", paths: ["M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H3z", "M3 7V5h13", "M17 13h.01"] },
   { href: "/equity", label: "Investment Portfolio", paths: ["M3 17l6-6 4 4 7-8", "M21 7h-4", "M21 7v4"] },
-  { href: "/budget", label: "Budgets", paths: ["M21 12a9 9 0 1 1-9-9", "M21 3v9h-9"] }
+  { href: "/budget", label: "Budgets", paths: ["M21 12a9 9 0 1 1-9-9", "M21 3v9h-9"] },
+  { href: "/goals", label: "Goals", paths: ["M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z", "M12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z", "M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"] }
 ];
 
 function Ic({ paths, size = 18 }: { paths: string[]; size?: number }) {
