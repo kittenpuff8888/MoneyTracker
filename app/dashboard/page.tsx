@@ -164,7 +164,7 @@ export default async function DashboardPage({
         ) : (
           <>
             {/* Hero row */}
-            <div className="mb-3.5 grid gap-3.5" style={{ gridTemplateColumns: "1.25fr 1fr 1fr" }}>
+            <div className="mb-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-[1.25fr_1fr_1fr]">
               {/* Net balance — spans 2 rows */}
               <div className="flex flex-col p-[18px]" style={{ ...PANEL, gridRow: "span 2" }}>
                 <div className="mb-3.5 flex items-center justify-between">
@@ -230,7 +230,7 @@ export default async function DashboardPage({
             </div>
 
             {/* AI insights + budget warnings */}
-            <div className="mb-3.5 grid gap-3.5" style={{ gridTemplateColumns: "1.3fr 1fr" }}>
+            <div className="mb-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
               <div className="p-4" style={PANEL}>
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -279,7 +279,7 @@ export default async function DashboardPage({
             </div>
 
             {/* Income vs expense + breakdown */}
-            <div className="mb-3.5 grid gap-3.5" style={{ gridTemplateColumns: "1.55fr 1fr" }}>
+            <div className="mb-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1.55fr_1fr]">
               <div className="px-[18px] py-4" style={PANEL}>
                 <div className="mb-1.5 flex items-center justify-between">
                   <div className="text-[11px] font-semibold tracking-[.07em]" style={{ color: "var(--faint)" }}>INCOME vs EXPENSE</div>
