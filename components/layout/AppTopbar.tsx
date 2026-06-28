@@ -4,11 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { payPeriodRange } from "@/lib/pay-period";
 
 type AppTopbarProps = {
   name?: string | null;
   email?: string | null;
   avatarUrl?: string | null;
+  payDay?: number | null;
 };
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -24,7 +26,7 @@ function parse(s: string | null): Date | null {
   return new Date(y, m - 1, d);
 }
 
-export function AppTopbar({ name, email, avatarUrl }: AppTopbarProps) {
+export function AppTopbar({ name, email, avatarUrl, payDay }: AppTopbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -38,8 +40,10 @@ export function AppTopbar({ name, email, avatarUrl }: AppTopbarProps) {
   const now = new Date();
   const urlFrom = parse(searchParams.get("from"));
   const urlTo = parse(searchParams.get("to"));
-  const from = urlFrom ?? new Date(now.getFullYear(), now.getMonth(), 1);
-  const to = urlTo ?? new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  // Default range = the current pay cycle (from the user's pay day to today)
+  const payCycle = payPeriodRange(payDay, now);
+  const from = urlFrom ?? payCycle.from;
+  const to = urlTo ?? payCycle.to;
 
   const [calY, setCalY] = useState(from.getFullYear());
   const [calM, setCalM] = useState(from.getMonth());
@@ -115,7 +119,9 @@ export function AppTopbar({ name, email, avatarUrl }: AppTopbarProps) {
   function preset(kind: "month" | "14d" | "7d") {
     const t = new Date();
     if (kind === "month") {
-      applyRange(new Date(t.getFullYear(), t.getMonth(), 1), new Date(t.getFullYear(), t.getMonth() + 1, 0));
+      // "This month" = the current pay cycle (pay day → today)
+      const pc = payPeriodRange(payDay, t);
+      applyRange(pc.from, pc.to);
     } else {
       const days = kind === "14d" ? 13 : 6;
       const f = new Date(t); f.setDate(f.getDate() - days);

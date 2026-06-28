@@ -48,7 +48,8 @@ export function SettingsForm({ profile }: { profile: Profile }) {
       weekly_report_enabled: profile.weekly_report_enabled,
       report_frequency: (profile.report_frequency as SettingsValues["report_frequency"]) ?? "weekly",
       report_day: profile.report_day ?? profile.weekly_report_day ?? "sunday",
-      report_time: profile.report_time ?? "08:00"
+      report_time: profile.report_time ?? "08:00",
+      pay_day: profile.pay_day ?? 1
     }
   });
 
@@ -75,6 +76,15 @@ export function SettingsForm({ profile }: { profile: Profile }) {
       <label className="grid gap-1.5 text-sm font-medium">
         Full Name
         <Input {...register("full_name")} />
+      </label>
+
+      {/* Pay-cycle anchor */}
+      <label className="grid gap-1.5 text-sm font-medium">
+        Salary / pay day
+        <Input type="number" min="1" max="28" className="num" {...register("pay_day")} />
+        <span className="text-xs font-normal text-muted-foreground">
+          Day of the month your salary lands. &ldquo;This month&rdquo; will run from this day to today (e.g. 25 → 25th last month until now).
+        </span>
       </label>
 
       {/* Report schedule section */}

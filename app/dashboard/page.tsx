@@ -2,14 +2,12 @@ import {
   differenceInCalendarDays,
   eachDayOfInterval,
   eachMonthOfInterval,
-  endOfMonth,
   format,
   isSameDay,
   isSameMonth,
-  parseISO,
-  startOfMonth,
-  subMonths
+  parseISO
 } from "date-fns";
+import { payPeriodRange, ymd } from "@/lib/pay-period";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { IncomeOutcomeChart } from "@/components/charts/IncomeOutcomeChart";
@@ -80,8 +78,12 @@ export default async function DashboardPage({
 
   const sp = await searchParams;
   const now = new Date();
-  const from = isValidDate(sp.from) ? sp.from : format(startOfMonth(now), "yyyy-MM-dd");
-  const to = isValidDate(sp.to) ? sp.to : format(endOfMonth(now), "yyyy-MM-dd");
+
+  // Pay-cycle aware default range (pay day → today) when none is selected
+  const { data: payProfile } = await supabase.from("profiles").select("pay_day").eq("id", user.id).single();
+  const cycle = payPeriodRange(payProfile?.pay_day, now);
+  const from = isValidDate(sp.from) ? sp.from : ymd(cycle.from);
+  const to = isValidDate(sp.to) ? sp.to : ymd(cycle.to);
   const fromDate = parseISO(from);
   const toDate = parseISO(to);
 

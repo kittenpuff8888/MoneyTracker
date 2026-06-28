@@ -96,7 +96,9 @@ export const settingsSchema = z.object({
   report_time: z
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM 24-hour time")
-    .default("08:00")
+    .default("08:00"),
+  // Day of month your salary lands — anchors the "This month" pay-cycle range.
+  pay_day: z.coerce.number().int().min(1).max(28).default(1)
 });
 
 export const goalSchema = z.object({

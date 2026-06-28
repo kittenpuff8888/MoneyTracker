@@ -29,7 +29,7 @@ export function DashboardShell({
         >
           <AppSidebar />
           <div className="flex min-w-0 flex-1 flex-col">
-            <AppTopbar name={profile?.full_name} email={profile?.email} avatarUrl={profile?.avatar_url} />
+            <AppTopbar name={profile?.full_name} email={profile?.email} avatarUrl={profile?.avatar_url} payDay={profile?.pay_day} />
             <main className="flex-1 px-4 pb-28 pt-5 sm:px-6 md:px-[30px] md:pb-16 md:pt-6">
               {children}
             </main>

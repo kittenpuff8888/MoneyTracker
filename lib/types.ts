@@ -39,6 +39,7 @@ export type Profile = {
   report_frequency: ReportFrequency | string;
   report_day: string;
   report_time: string;
+  pay_day: number;
   last_weekly_report_sent_at: string | null;
   created_at: string;
 };

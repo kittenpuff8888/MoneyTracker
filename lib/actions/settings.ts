@@ -21,6 +21,7 @@ export async function updateSettings(input: unknown) {
       report_frequency: parsed.report_frequency,
       report_day: parsed.report_day,
       report_time: parsed.report_time,
+      pay_day: parsed.pay_day,
       // keep legacy column in sync for the existing weekly cron
       weekly_report_day: parsed.report_frequency === "weekly" ? parsed.report_day : "sunday"
     })
