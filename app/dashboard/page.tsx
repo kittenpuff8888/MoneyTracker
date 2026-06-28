@@ -1,7 +1,8 @@
 import { endOfMonth, format, parseISO, startOfMonth, subMonths } from "date-fns";
-import { ArrowDownLeft, ArrowUpRight, Banknote, Flame, Minus, PiggyBank, Plus, Wallet } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Banknote, Minus, PiggyBank, Plus } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Badge } from "@/components/ui/Badge";
 import { BudgetWarningCard } from "@/components/cards/BudgetWarningCard";
 import { InsightCard } from "@/components/cards/InsightCard";
 import { StatCard } from "@/components/cards/StatCard";
@@ -152,25 +153,28 @@ export default async function DashboardPage({
       ) : (
         <div className="grid gap-5 xl:grid-cols-12">
           <div className="grid gap-5 xl:col-span-9">
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              <StatCard
-                title="Net Balance"
-                value={formatIDR(netBalance)}
-                icon={<Wallet size={18} />}
-                badge={netBalance >= 0 ? "POSITIVE" : "NEGATIVE"}
-                badgeTone={netBalance >= 0 ? "green" : "orange"}
-                helper={netBalance >= 0 ? "Combined balance across your wallets." : "Your combined wallet balance is below zero."}
-              >
-                <div>
-                  <div className="flex justify-between text-xs text-muted-foreground"><span>Burn Rate</span><span>{formatPercent(burnRate)}</span></div>
-                  <div className="mt-2 h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-sky-500" style={{ width: `${burnRate}%` }} /></div>
-                </div>
-              </StatCard>
+            <div className="grid items-start gap-4 md:grid-cols-3">
+              <Card className="md:row-span-2">
+                <CardContent className="flex h-full flex-col">
+                  <div className="flex items-center justify-between">
+                    <span className="eyebrow">Net Balance</span>
+                    <Badge tone={netBalance >= 0 ? "green" : "orange"}>{netBalance >= 0 ? "SAFE" : "LOW"}</Badge>
+                  </div>
+                  <p className="num mt-3 text-3xl font-bold">{formatIDR(netBalance)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {netBalance >= 0 ? "Combined balance across your wallets." : "Your combined wallet balance is below zero."}
+                  </p>
+                  <div className="mt-5">
+                    <div className="flex justify-between text-xs text-muted-foreground"><span>Burn rate</span><span className="num">{formatPercent(burnRate)}</span></div>
+                    <div className="mt-2 h-1.5 rounded-full bg-slate-100"><div className="h-1.5 rounded-full bg-blue-600" style={{ width: `${burnRate}%` }} /></div>
+                  </div>
+                  <p className="mt-auto pt-5 text-xs leading-5 text-muted-foreground">You are on track to grow your savings this period.</p>
+                </CardContent>
+              </Card>
               <StatCard title="Income" value={formatIDR(income)} icon={<ArrowDownLeft size={18} />} badge={incomeChange.label} badgeTone={incomeChange.tone} />
-              <StatCard title="Outcome" value={formatIDR(outcome)} icon={<ArrowUpRight size={18} />} badge={outcomeChange.label} badgeTone={outcomeChange.value <= 0 ? "green" : "orange"} />
+              <StatCard title="Expense" value={formatIDR(outcome)} icon={<ArrowUpRight size={18} />} badge={outcomeChange.label} badgeTone={outcomeChange.value <= 0 ? "green" : "orange"} />
               <StatCard title="Savings Ratio" value={formatPercent(savingsRatio)} icon={<PiggyBank size={18} />} badge={savingsChange.label} badgeTone={savingsChange.tone} />
               <StatCard title="Remaining Balance" value={formatIDR(remaining)} icon={<Banknote size={18} />} helper="Income minus outcome in range" />
-              <StatCard title="Burn Rate" value={formatPercent(burnRate)} icon={<Flame size={18} />} helper="Outcome divided by income" />
             </div>
 
             <Card>

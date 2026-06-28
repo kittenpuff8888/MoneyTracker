@@ -19,7 +19,7 @@ export default async function AccountsPage() {
 
   return (
     <DashboardShell profile={profileResult.data}>
-      <div className="mb-6"><h1 className="text-3xl font-bold">Wallet</h1><p className="mt-1 text-sm text-muted-foreground">Manage your wallets by type \u2014 bank, cash, e-wallet, e-money, savings, and investment.</p></div>
+      <div className="mb-6"><h1 className="text-3xl font-bold">Wallet</h1><p className="mt-1 text-sm text-muted-foreground">Manage your wallets by type — bank, cash, e-wallet, e-money, savings, and investment.</p></div>
       <AccountsManager accounts={accountsResult.data ?? []} transactions={transactionsResult.data ?? []} />
     </DashboardShell>
   );
