@@ -114,7 +114,13 @@ export async function generateBudgetInsightFromData(
 
   if (!options.useExternalAi) return fallback;
 
-  // Prefer Anthropic Claude when configured, else fall back to OpenAI, else the computed insight.
+  // Provider order: Gemini (has a free tier) → Anthropic → OpenAI → computed fallback.
+  if (process.env.GEMINI_API_KEY) {
+    const lines = await callGemini(systemPrompt, financeContext);
+    if (lines) return { ...fallback, conclusion: lines.map((line) => `- ${line}`).join("\n") };
+    return fallback;
+  }
+
   if (process.env.ANTHROPIC_API_KEY) {
     const lines = await callAnthropic(systemPrompt, financeContext);
     if (lines) return { ...fallback, conclusion: lines.map((line) => `- ${line}`).join("\n") };
@@ -205,6 +211,41 @@ export async function generateBudgetInsightFromData(
     return { ...fallback, conclusion: lines.map((line) => `- ${line}`).join("\n") };
   } catch {
     return fallback;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// Call Google Gemini (free tier via Google AI Studio) for grounded insights.
+// Returns the insight lines, or null on any error so the caller uses its fallback.
+async function callGemini(systemPrompt: string, financeContext: unknown): Promise<string[] | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: `${systemPrompt} Respond with ONLY a JSON object of the form {"insights": string[], "warnings"?: string[]}.` }] },
+          contents: [{ role: "user", parts: [{ text: JSON.stringify({ financeContext }) }] }],
+          generationConfig: { responseMimeType: "application/json", temperature: 0.3, maxOutputTokens: 500 }
+        })
+      }
+    );
+    if (!response.ok) return null;
+    const json = await response.json();
+    const text: string | undefined = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return null;
+    const match = text.match(/\{[\s\S]*\}/);
+    const parsed = AIOutputSchema.safeParse(JSON.parse(match ? match[0] : text));
+    if (!parsed.success) return null;
+    return [...parsed.data.insights, ...(parsed.data.warnings ?? [])].slice(0, 5);
+  } catch {
+    return null;
   } finally {
     clearTimeout(timeout);
   }
