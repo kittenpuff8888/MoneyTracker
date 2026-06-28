@@ -51,11 +51,20 @@ export default async function DashboardPage({
   const fromDate = parseISO(from);
   const toDate = parseISO(to);
 
-  const sixMonthsAgo = format(startOfMonth(subMonths(now, 5)), "yyyy-MM-dd");
+  const sixMonthsAgoDate = startOfMonth(subMonths(now, 5));
+  const sixMonthsAgo = format(sixMonthsAgoDate, "yyyy-MM-dd");
+  // Lower bound for the transactions fetch: cover the selected range, the
+  // equal-length previous period, and the 6-month trend - whichever is earliest.
+  const rangeLengthMs = toDate.getTime() - fromDate.getTime();
+  const prevPeriodStart = new Date(fromDate.getTime() - 24 * 60 * 60 * 1000 - rangeLengthMs);
+  const fetchStart = format(
+    new Date(Math.min(prevPeriodStart.getTime(), sixMonthsAgoDate.getTime())),
+    "yyyy-MM-dd"
+  );
   const [profileResult, accountsResult, transactionsResult, budgetsResult, subscriptionsResult, goalsResult, equityResult, monthlyResult] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("accounts").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-    supabase.from("transactions").select("*").eq("user_id", user.id).order("transaction_date", { ascending: false }),
+    supabase.from("transactions").select("*").eq("user_id", user.id).gte("transaction_date", fetchStart).order("transaction_date", { ascending: false }).limit(5000),
     supabase.from("budgets").select("*").eq("user_id", user.id),
     supabase.from("subscriptions").select("*").eq("user_id", user.id).order("billing_date", { ascending: true }),
     supabase.from("goals").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),

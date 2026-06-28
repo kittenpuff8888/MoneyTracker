@@ -47,22 +47,24 @@ export async function GET(request: Request) {
     );
   }
 
-  const { periodStart, periodEnd, weekRange } = getJakartaWeekRange(new Date());
   const results = [];
 
   for (const profile of profiles ?? []) {
     if (!profile.email) continue;
 
-    if (profile.last_weekly_report_sent_at && isSameJakartaWeek(new Date(profile.last_weekly_report_sent_at), new Date())) {
-      results.push({ userId: profile.id, sent: false, skipped: true });
+    const ctx = getReportContext(profile, new Date());
+    if (!ctx) {
+      results.push({ userId: profile.id, sent: false, skipped: true, reason: "not scheduled today" });
       continue;
     }
+    const { periodStart, periodEnd, weekRange, reportType } = ctx;
+    const insightPeriod = reportType === "monthly" ? "monthly" : "weekly";
 
     const { data: existingDelivery } = await supabase
       .from("email_report_logs")
       .select("id,status")
       .eq("user_id", profile.id)
-      .eq("report_type", "weekly")
+      .eq("report_type", reportType)
       .eq("period_start", periodStart)
       .in("status", ["processing", "sent"])
       .limit(1)
@@ -77,7 +79,7 @@ export async function GET(request: Request) {
       .from("email_report_logs")
       .insert({
         user_id: profile.id,
-        report_type: "weekly",
+        report_type: reportType,
         period_start: periodStart,
         period_end: periodEnd,
         recipient_email: profile.email,
@@ -109,7 +111,7 @@ export async function GET(request: Request) {
           .gte("billing_date", toJakartaDateString(new Date()))
           .lte("billing_date", subscriptionsEnd)
           .limit(5),
-        generateBudgetInsight(supabase, profile.id, "weekly")
+        generateBudgetInsight(supabase, profile.id, insightPeriod)
       ]);
 
       const transactions = transactionsResult.data ?? [];
@@ -208,6 +210,56 @@ async function sendWeeklyReportWithRetry(
   };
 }
 
+const WEEKDAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+type ReportContext = {
+  reportType: "daily" | "weekly" | "monthly";
+  periodStart: string;
+  periodEnd: string;
+  weekRange: string;
+};
+
+// Decide whether a report is due for this profile *today* (Asia/Jakarta), and
+// the period it should cover. Returns null when nothing is scheduled today.
+function getReportContext(profile: { report_frequency?: string | null; report_day?: string | null }, now: Date): ReportContext | null {
+  const frequency = (profile.report_frequency ?? "weekly").toLowerCase();
+  const jakartaNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+
+  if (frequency === "daily") {
+    const start = new Date(Date.UTC(jakartaNow.getUTCFullYear(), jakartaNow.getUTCMonth(), jakartaNow.getUTCDate()));
+    return {
+      reportType: "daily",
+      periodStart: formatDateOnly(start),
+      periodEnd: formatDateOnly(start),
+      weekRange: `${formatDisplayDate(start)} WIB`
+    };
+  }
+
+  if (frequency === "monthly") {
+    const wantDom = Math.min(Math.max(Number(profile.report_day ?? "1") || 1, 1), 28);
+    if (jakartaNow.getUTCDate() !== wantDom) return null;
+    const start = new Date(Date.UTC(jakartaNow.getUTCFullYear(), jakartaNow.getUTCMonth(), 1));
+    const end = new Date(Date.UTC(jakartaNow.getUTCFullYear(), jakartaNow.getUTCMonth(), jakartaNow.getUTCDate()));
+    return {
+      reportType: "monthly",
+      periodStart: formatDateOnly(start),
+      periodEnd: formatDateOnly(end),
+      weekRange: `${formatDisplayDate(start)} - ${formatDisplayDate(end)} WIB`
+    };
+  }
+
+  // weekly (default)
+  const wantDay = (profile.report_day ?? "sunday").toLowerCase();
+  if (WEEKDAY_NAMES[jakartaNow.getUTCDay()] !== wantDay) return null;
+  const week = getJakartaWeekRange(now);
+  return {
+    reportType: "weekly",
+    periodStart: week.periodStart,
+    periodEnd: week.periodEnd,
+    weekRange: week.weekRange
+  };
+}
+
 function getJakartaWeekRange(now: Date) {
   const jakartaNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
   const day = jakartaNow.getUTCDay();
@@ -220,10 +272,6 @@ function getJakartaWeekRange(now: Date) {
     periodEnd: formatDateOnly(end),
     weekRange: `${formatDisplayDate(start)} - ${formatDisplayDate(end)} WIB`
   };
-}
-
-function isSameJakartaWeek(a: Date, b: Date) {
-  return getJakartaWeekRange(a).periodStart === getJakartaWeekRange(b).periodStart;
 }
 
 function toJakartaDateString(date: Date) {

@@ -4,8 +4,9 @@ import { useMemo, useState } from "react";
 import { AccountCard } from "@/components/accounts/AccountCard";
 import { AccountForm } from "@/components/accounts/AccountForm";
 import { Button } from "@/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Modal } from "@/components/ui/Modal";
 import { formatIDR } from "@/lib/formatters";
 import { calculateNetBalance, calculateWalletRollup } from "@/lib/calculations";
 import { Plus } from "lucide-react";
@@ -70,22 +71,22 @@ export function AccountsManager({ accounts, transactions }: { accounts: Account[
         </Card>
       </div>
 
-      {showForm ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editing ? "Edit Wallet" : "Add Wallet"}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AccountForm
-              account={editing}
-              onSaved={() => {
-                setEditing(null);
-                setShowForm(false);
-              }}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
+      <Modal
+        open={showForm}
+        title={editing ? "Edit Wallet" : "Add Wallet"}
+        onClose={() => {
+          setShowForm(false);
+          setEditing(null);
+        }}
+      >
+        <AccountForm
+          account={editing}
+          onSaved={() => {
+            setEditing(null);
+            setShowForm(false);
+          }}
+        />
+      </Modal>
 
       {accounts.length === 0 ? (
         <EmptyState title="No wallets yet." description="Add your first wallet, bank account, or e-wallet." />
