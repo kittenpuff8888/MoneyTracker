@@ -105,8 +105,8 @@ export async function generateBudgetInsightFromData(
   };
 
   const systemPrompt = [
-    "You create concise, personal-finance insights in Bahasa Indonesia.",
-    "Use only the supplied user's financial data and IDR values.",
+    "You create concise, personal-finance insights in clear, natural English.",
+    "Use only the supplied user's financial data and format money as IDR (e.g. Rp 1.250.000).",
     "Never invent transactions or amounts.",
     "Return valid JSON with 3-5 short insights and optional warnings.",
     "Do not include markdown or prose outside the JSON object."
@@ -139,13 +139,7 @@ export async function generateBudgetInsightFromData(
         messages: [
           {
             role: "system",
-            content: [
-              "You create concise personal-finance insights in Bahasa Indonesia.",
-              "Use only the supplied user's financial data and IDR values.",
-              "Never invent transactions or amounts.",
-              "Return valid JSON with 3-5 short insights and optional warnings.",
-              "Do not include markdown or prose outside the JSON object."
-            ].join(" ")
+            content: systemPrompt
           },
           {
             role: "user",
@@ -297,18 +291,18 @@ function buildFallbackInsight({
   const highest = topCategories[0]?.category;
   const subscriptionTotal = subscriptions.reduce((sum, subscription) => sum + Number(subscription.amount), 0);
   const lines = [
-    `Pemasukan ${formatIDR(income)}, pengeluaran ${formatIDR(outcome)}, dan rasio tabungan ${formatPercent(savingsRate)}.`,
+    `Income ${formatIDR(income)}, expenses ${formatIDR(outcome)}, savings ratio ${formatPercent(savingsRate)}.`,
     highest
-      ? `Pengeluaran terbesar adalah ${highest} sebesar ${formatIDR(topCategories[0]?.amount ?? 0)}.`
-      : "Tambahkan transaksi berkategori agar analisis pengeluaran menjadi lebih tajam.",
+      ? `Your largest spend is ${highest} at ${formatIDR(topCategories[0]?.amount ?? 0)}.`
+      : "Add categorized transactions to sharpen your spending analysis.",
     unusual.length
-      ? `${unusual.join(", ")} meningkat dibanding pola belanja sebelumnya.`
-      : `Skor kesehatan keuangan saat ini ${intelligence.financialHealthScore}/100.`,
+      ? `${unusual.join(", ")} rose compared with your earlier spending pattern.`
+      : `Your current financial health score is ${intelligence.financialHealthScore}/100.`,
     subscriptionTotal > income * 0.15 && income > 0
-      ? `Langganan mencapai ${formatIDR(subscriptionTotal)}; tinjau layanan yang jarang digunakan.`
+      ? `Subscriptions reach ${formatIDR(subscriptionTotal)}; review services you rarely use.`
       : budgets.length
-        ? "Batas anggaran aktif dan siap memantau risiko pengeluaran berlebih."
-        : "Buat anggaran kategori untuk menerima peringatan penggunaan 75%, 90%, dan 100%.",
+        ? "Budget limits are active and ready to flag overspending risk."
+        : "Create category budgets to get alerts at 75%, 90%, and 100% usage.",
     period === "weekly"
       ? intelligence.nextWeekRecommendation
       : intelligence.nextMonthRecommendation
