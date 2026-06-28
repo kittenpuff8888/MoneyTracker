@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, X } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { useAddTransaction } from "@/components/transactions/AddTransactionModal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransactionTable } from "@/components/transactions/TransactionTable";
-import { cn } from "@/lib/utils";
+import { formatIDR } from "@/lib/formatters";
+import { toNumber } from "@/lib/calculations";
 import type { Account, Transaction } from "@/lib/types";
 
 type TypeFilter = "all" | "income" | "outcome" | "transfer";
@@ -21,17 +21,18 @@ export function TransactionsManager({
   transactions: Transaction[];
   categories?: string[];
 }) {
+  const { open } = useAddTransaction();
   const [editing, setEditing] = useState<Transaction | null>(null);
-  const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [catFilter, setCatFilter] = useState("");
   const [walletFilter, setWalletFilter] = useState("");
 
-  const allCats = useMemo(() => {
-    const s = new Set(transactions.map((t) => t.category));
-    return Array.from(s).sort();
-  }, [transactions]);
+  const allCats = useMemo(
+    () => Array.from(new Set(transactions.map((t) => t.category))).sort(),
+    [transactions]
+  );
 
   const filtered = useMemo(() => {
     let list = transactions;
@@ -40,18 +41,15 @@ export function TransactionsManager({
     if (walletFilter) list = list.filter((t) => t.from_account_id === walletFilter || t.to_account_id === walletFilter);
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter((t) =>
-        (t.name ?? "").toLowerCase().includes(q) ||
-        t.category.toLowerCase().includes(q) ||
-        (t.notes ?? "").toLowerCase().includes(q)
-      );
+      list = list.filter((t) => (t.name ?? "").toLowerCase().includes(q) || t.category.toLowerCase().includes(q));
     }
     return list;
   }, [transactions, typeFilter, catFilter, walletFilter, search]);
 
-  function startAdd() { setEditing(null); setOpen(true); }
-  function startEdit(t: Transaction) { setEditing(t); setOpen(true); }
-  function close() { setOpen(false); setEditing(null); }
+  const net = useMemo(
+    () => filtered.reduce((a, t) => a + (t.type === "income" ? toNumber(t.amount) : t.type === "outcome" ? -toNumber(t.amount) : 0), 0),
+    [filtered]
+  );
 
   const tabs: { key: TypeFilter; label: string }[] = [
     { key: "all", label: "All" },
@@ -60,93 +58,81 @@ export function TransactionsManager({
     { key: "transfer", label: "Move" }
   ];
 
+  const selectStyle = { background: "var(--panel)", border: "1px solid var(--border)", color: "var(--text)", boxShadow: "var(--sh)" };
+
   return (
-    <div className="grid gap-4">
+    <section className="mx-auto">
+      {/* Header */}
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[24px] font-bold tracking-[-.01em]">Transactions</h1>
+          <p className="mt-1.5 text-[13px]" style={{ color: "var(--muted)" }}>
+            <span className="num font-semibold" style={{ color: "var(--text)" }}>{filtered.length}</span> entries · net{" "}
+            <span className="num font-semibold" style={{ color: net >= 0 ? "var(--up)" : "var(--down)" }}>{net >= 0 ? "+" : "−"}{formatIDR(net)}</span>
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => open()}
+          className="flex items-center gap-[7px] rounded-[10px] px-[14px] py-[9px] text-[12.5px] font-semibold transition hover:opacity-90"
+          style={{ background: "var(--ink)", color: "var(--panel)" }}
+        >
+          + Add Transaction
+        </button>
+      </div>
+
       {/* Filter toolbar */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3">
-        {/* Search */}
-        <div className="relative min-w-40 flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+      <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-[7px] rounded-[10px] px-[11px] py-2" style={selectStyle}>
+          <span className="text-[13px]" style={{ color: "var(--faint)" }}>⌕</span>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search…"
-            className="h-9 w-full rounded-lg border border-border bg-muted pl-8 pr-8 text-sm outline-none focus:border-primary"
+            placeholder="Search merchant…"
+            className="w-[130px] border-none bg-transparent text-[12.5px] outline-none"
+            style={{ color: "var(--text)" }}
           />
-          {search && (
-            <button type="button" onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
-              <X size={13} />
-            </button>
-          )}
         </div>
-
-        {/* Category filter */}
-        <select
-          value={catFilter}
-          onChange={(e) => setCatFilter(e.target.value)}
-          className="h-9 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none focus:border-primary"
-        >
+        <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className="cursor-pointer rounded-[10px] px-[11px] py-[9px] text-[12.5px] outline-none" style={selectStyle}>
           <option value="">All categories</option>
           {allCats.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-
-        {/* Wallet filter */}
-        <select
-          value={walletFilter}
-          onChange={(e) => setWalletFilter(e.target.value)}
-          className="h-9 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none focus:border-primary"
-        >
+        <select value={walletFilter} onChange={(e) => setWalletFilter(e.target.value)} className="cursor-pointer rounded-[10px] px-[11px] py-[9px] text-[12.5px] outline-none" style={selectStyle}>
           <option value="">All wallets</option>
           {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
-
-        {/* Type tabs */}
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setTypeFilter(tab.key)}
-              className={cn(
-                "rounded-md px-3 py-1 text-xs font-semibold transition",
-                typeFilter === tab.key
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex-1" />
+        <div className="flex gap-0.5 rounded-[10px] p-[3px]" style={{ background: "var(--soft)", border: "1px solid var(--border)" }}>
+          {tabs.map((tab) => {
+            const active = typeFilter === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setTypeFilter(tab.key)}
+                className="rounded-lg px-[13px] py-1.5 text-[12px] font-semibold transition"
+                style={{ background: active ? "var(--ink)" : "transparent", color: active ? "var(--panel)" : "var(--muted)" }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
-
-        <Button type="button" onClick={startAdd} className="ml-auto shrink-0">
-          <Plus size={15} />
-          Add
-        </Button>
       </div>
 
-      <Modal
-        open={open}
-        title={editing ? "Edit Transaction" : "Add Transaction"}
-        onClose={close}
-      >
-        <TransactionForm accounts={accounts} transaction={editing} categories={categories} onSaved={close} />
+      <Modal open={editOpen} title="Edit Transaction" onClose={() => { setEditOpen(false); setEditing(null); }}>
+        <TransactionForm accounts={accounts} transaction={editing} categories={categories} onSaved={() => { setEditOpen(false); setEditing(null); }} />
       </Modal>
 
       {filtered.length === 0 ? (
         transactions.length === 0 ? (
-          <EmptyState title="No transactions yet." description="Start by adding income, expense, or transfer." />
+          <EmptyState title="No transactions yet." description="Start by adding income, expense, or a move." />
         ) : (
           <EmptyState title="No results." description="Try adjusting your filters." />
         )
       ) : (
-        <div>
-          {transactions.length >= 100 && (
-            <p className="mb-2 text-xs text-muted-foreground">Showing latest 100 transactions.</p>
-          )}
-          <TransactionTable transactions={filtered} accounts={accounts} onEdit={startEdit} />
-        </div>
+        <TransactionTable transactions={filtered} accounts={accounts} onEdit={(t) => { setEditing(t); setEditOpen(true); }} />
       )}
-    </div>
+    </section>
   );
 }

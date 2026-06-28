@@ -23,7 +23,6 @@ export default async function TransactionsPage() {
 
   return (
     <DashboardShell profile={profileResult.data}>
-      <div className="mb-6"><h1 className="text-3xl font-bold">Transactions</h1><p className="mt-1 text-sm text-muted-foreground">Add, edit, delete, and view income, outcome, and Transfer / Move Money records.</p></div>
       <TransactionsManager accounts={accountsResult.data ?? []} transactions={transactionsResult.data ?? []} categories={categories} />
     </DashboardShell>
   );

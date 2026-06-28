@@ -1,11 +1,11 @@
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { SettingsForm } from "@/components/settings/SettingsForm";
 import { CategoryManager } from "@/components/categories/CategoryManager";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { createClient } from "@/lib/supabase/server";
+
+const PANEL = { background: "var(--panel)", border: "1px solid var(--border)", borderRadius: "var(--r)", boxShadow: "var(--sh)" } as const;
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -24,99 +24,73 @@ export default async function SettingsPage() {
 
   return (
     <DashboardShell profile={profile}>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Manage your profile, report schedule, and categories.</p>
-      </div>
-
-      <div className="grid gap-5">
-        {/* Profile + Preferences row */}
-        <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
-          {/* Profile card */}
-          <Card>
-            <CardContent className="flex flex-col items-center py-6 text-center">
-              {profile.avatar_url ? (
-                <Image
-                  src={profile.avatar_url}
-                  alt={profile.full_name ?? "Avatar"}
-                  width={80}
-                  height={80}
-                  className="rounded-full"
-                />
-              ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-foreground text-2xl font-bold text-card">
-                  {(profile.full_name ?? profile.email ?? "U").slice(0, 1).toUpperCase()}
-                </div>
-              )}
-              <h2 className="mt-4 text-lg font-bold">{profile.full_name}</h2>
-              <p className="break-all text-sm text-muted-foreground">{profile.email}</p>
-              <div className="mt-5 w-full">
-                <LogoutButton />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Preferences */}
-          <Card>
-            <CardHeader><CardTitle>Preferences</CardTitle></CardHeader>
-            <CardContent>
-              <SettingsForm profile={profile} />
-            </CardContent>
-          </Card>
+      <section className="mx-auto max-w-[920px]">
+        <div className="mb-5">
+          <h1 className="text-[24px] font-bold tracking-[-.01em]">Settings</h1>
+          <p className="mt-1.5 text-[13.5px]" style={{ color: "var(--muted)" }}>
+            Control how your reports are generated and manage the categories used across the app.
+          </p>
         </div>
 
-        {/* Category Manager */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Categories</CardTitle>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              These categories feed every dropdown in Transactions and Budgets.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <CategoryManager categories={categoriesResult.data ?? []} />
-          </CardContent>
-        </Card>
+        {/* Profile */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4 p-5" style={PANEL}>
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full text-[18px] font-bold" style={{ background: "var(--ink)", color: "var(--panel)" }}>
+              {(profile.full_name ?? profile.email ?? "U").slice(0, 1).toUpperCase()}
+            </div>
+            <div>
+              <div className="text-[15px] font-bold">{profile.full_name ?? "8888 User"}</div>
+              <div className="break-all text-[12.5px]" style={{ color: "var(--muted)" }}>{profile.email}</div>
+            </div>
+          </div>
+          <div className="w-full sm:w-auto"><LogoutButton /></div>
+        </div>
+
+        {/* Report schedule */}
+        <div className="mb-4 p-5" style={PANEL}>
+          <div className="mb-1 text-[11px] font-semibold tracking-[.07em]" style={{ color: "var(--faint)" }}>REPORT SCHEDULE</div>
+          <div className="mb-4 text-[13px]" style={{ color: "var(--muted)" }}>Choose when 8888 Tracker compiles and sends your summary.</div>
+          <SettingsForm profile={profile} />
+        </div>
+
+        {/* Category manager */}
+        <div className="mb-4 p-5" style={PANEL}>
+          <div className="mb-1 text-[11px] font-semibold tracking-[.07em]" style={{ color: "var(--faint)" }}>CATEGORIES</div>
+          <div className="mb-4 text-[13px]" style={{ color: "var(--muted)" }}>Used in transaction type &amp; category dropdowns. Add, rename, or remove.</div>
+          <CategoryManager categories={categoriesResult.data ?? []} />
+        </div>
 
         {/* Activity logs */}
-        <div className="grid gap-5 lg:grid-cols-2">
-          <Card>
-            <CardHeader><CardTitle>Financial Activity Log</CardTitle></CardHeader>
-            <CardContent className="divide-y divide-border p-0">
-              {(auditResult.data ?? []).length ? (
-                (auditResult.data ?? []).map((entry) => (
-                  <div key={entry.id} className="flex items-center justify-between gap-4 px-5 py-3 text-sm">
-                    <span><strong>{entry.action}</strong> {entry.entity_type.replaceAll("_", " ")}</span>
-                    <time className="num shrink-0 text-xs text-muted-foreground">
-                      {new Date(entry.created_at).toLocaleDateString("id-ID")}
-                    </time>
-                  </div>
-                ))
-              ) : (
-                <p className="px-5 py-4 text-sm text-muted-foreground">No audit records yet.</p>
-              )}
-            </CardContent>
-          </Card>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="overflow-hidden" style={PANEL}>
+            <div className="px-5 py-3.5 text-[11px] font-semibold tracking-[.07em]" style={{ color: "var(--faint)", borderBottom: "1px solid var(--hair)" }}>FINANCIAL ACTIVITY LOG</div>
+            {(auditResult.data ?? []).length ? (
+              (auditResult.data ?? []).map((entry) => (
+                <div key={entry.id} className="flex items-center justify-between gap-4 px-5 py-3 text-[13px]" style={{ borderBottom: "1px solid var(--hair)" }}>
+                  <span><strong>{entry.action}</strong> {entry.entity_type.replaceAll("_", " ")}</span>
+                  <time className="num shrink-0 text-[11px]" style={{ color: "var(--muted)" }}>{new Date(entry.created_at).toLocaleDateString("id-ID")}</time>
+                </div>
+              ))
+            ) : (
+              <p className="px-5 py-4 text-[13px]" style={{ color: "var(--muted)" }}>No audit records yet.</p>
+            )}
+          </div>
 
-          <Card>
-            <CardHeader><CardTitle>Report Delivery Log</CardTitle></CardHeader>
-            <CardContent className="divide-y divide-border p-0">
-              {(emailLogResult.data ?? []).length ? (
-                (emailLogResult.data ?? []).map((entry) => (
-                  <div key={entry.id} className="flex items-center justify-between gap-4 px-5 py-3 text-sm">
-                    <span className="capitalize">{entry.status}</span>
-                    <time className="num shrink-0 text-xs text-muted-foreground">
-                      {new Date(entry.created_at).toLocaleDateString("id-ID")}
-                    </time>
-                  </div>
-                ))
-              ) : (
-                <p className="px-5 py-4 text-sm text-muted-foreground">No report deliveries yet.</p>
-              )}
-            </CardContent>
-          </Card>
+          <div className="overflow-hidden" style={PANEL}>
+            <div className="px-5 py-3.5 text-[11px] font-semibold tracking-[.07em]" style={{ color: "var(--faint)", borderBottom: "1px solid var(--hair)" }}>REPORT DELIVERY LOG</div>
+            {(emailLogResult.data ?? []).length ? (
+              (emailLogResult.data ?? []).map((entry) => (
+                <div key={entry.id} className="flex items-center justify-between gap-4 px-5 py-3 text-[13px]" style={{ borderBottom: "1px solid var(--hair)" }}>
+                  <span className="capitalize">{entry.status}</span>
+                  <time className="num shrink-0 text-[11px]" style={{ color: "var(--muted)" }}>{new Date(entry.created_at).toLocaleDateString("id-ID")}</time>
+                </div>
+              ))
+            ) : (
+              <p className="px-5 py-4 text-[13px]" style={{ color: "var(--muted)" }}>No report deliveries yet.</p>
+            )}
+          </div>
         </div>
-      </div>
+      </section>
     </DashboardShell>
   );
 }

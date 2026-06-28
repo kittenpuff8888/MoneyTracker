@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDeleteButton } from "@/components/ui/ConfirmDeleteButton";
@@ -11,34 +11,25 @@ import { Select, Input } from "@/components/ui/Input";
 import { upsertBudget, deleteBudget } from "@/lib/actions/budgets";
 import { calculateBudgetUsage, type BudgetUsage } from "@/lib/calculations";
 import { formatIDR, formatPercent } from "@/lib/formatters";
+import { categoryColor } from "@/lib/category-colors";
 import { typedZodResolver } from "@/lib/form-resolver";
 import { budgetSchema } from "@/lib/validations";
 import { transactionCategories, type Budget, type Transaction } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import type { z } from "zod";
 
 type BudgetValues = z.infer<typeof budgetSchema>;
 
-function statusTag(level: BudgetUsage["level"]) {
-  const map = {
-    exceeded: { label: "Over budget", cls: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
-    warning: { label: "Tight", cls: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300" },
-    watch: { label: "Watch", cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
-    safe: { label: "On track", cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" }
-  };
-  const { label, cls } = map[level];
-  return (
-    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold", cls)}>
-      {label}
-    </span>
-  );
+function compact(n: number) {
+  const a = Math.abs(n);
+  const s = a >= 1e9 ? `${(a / 1e9).toFixed(1)} M` : a >= 1e6 ? `${(a / 1e6).toFixed(1)} jt` : a >= 1e3 ? `${Math.round(a / 1e3)} rb` : `${Math.round(a)}`;
+  return `Rp ${s}`;
 }
 
-function progressColor(level: BudgetUsage["level"]) {
-  if (level === "exceeded") return "bg-red-500";
-  if (level === "warning") return "bg-orange-500";
-  if (level === "watch") return "bg-amber-400";
-  return "bg-primary";
+type Tag = { label: string; bg: string; color: string; bar: string };
+function statusOf(item: BudgetUsage): Tag {
+  if (item.percentUsed >= 100) return { label: "Over", bg: "var(--downSoft)", color: "var(--down)", bar: "var(--down)" };
+  if (item.percentUsed > 85) return { label: "Tight", bg: "var(--warnSoft)", color: "var(--warn)", bar: "var(--warn)" };
+  return { label: "On track", bg: "var(--accentSoft)", color: "var(--accent)", bar: categoryColor(item.budget.category) };
 }
 
 export function BudgetManager({
@@ -55,6 +46,8 @@ export function BudgetManager({
   const [editing, setEditing] = useState<Budget | null>(null);
   const [open, setOpen] = useState(false);
   const usage = calculateBudgetUsage(budgets, transactions);
+  const totalSpent = usage.reduce((a, u) => a + u.spent, 0);
+  const totalBudget = usage.reduce((a, u) => a + Number(u.budget.monthly_limit ?? 0), 0);
 
   const { register, handleSubmit, reset } = useForm<BudgetValues>({
     resolver: typedZodResolver<BudgetValues>(budgetSchema),
@@ -66,25 +59,16 @@ export function BudgetManager({
     reset({ category: categoryOptions[0] ?? "Other", monthly_limit: 0, period_start: "", period_end: "" });
     setOpen(true);
   }
-
   function editBudget(budget: Budget) {
     setEditing(budget);
-    reset({
-      id: budget.id,
-      category: budget.category as BudgetValues["category"],
-      monthly_limit: budget.monthly_limit,
-      period_start: budget.period_start ?? "",
-      period_end: budget.period_end ?? ""
-    });
+    reset({ id: budget.id, category: budget.category as BudgetValues["category"], monthly_limit: budget.monthly_limit, period_start: budget.period_start ?? "", period_end: budget.period_end ?? "" });
     setOpen(true);
   }
-
   function onSubmit(values: BudgetValues) {
     startTransition(async () => {
       try {
         await upsertBudget(values);
-        setOpen(false);
-        setEditing(null);
+        setOpen(false); setEditing(null);
         reset({ category: categoryOptions[0] ?? "Other", monthly_limit: 0, period_start: "", period_end: "" });
         toast.success(editing ? "Budget updated." : "Budget added.");
       } catch (error) {
@@ -94,113 +78,70 @@ export function BudgetManager({
   }
 
   return (
-    <div className="grid gap-4">
-      <div className="flex justify-end">
-        <Button type="button" onClick={startAdd}>
-          <Plus size={15} /> Add Budget
-        </Button>
+    <section className="mx-auto max-w-[1100px]">
+      <div className="mb-[18px] flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[24px] font-bold tracking-[-.01em]">Budgets</h1>
+          <p className="mt-1.5 text-[13.5px]" style={{ color: "var(--muted)" }}>
+            {compact(totalSpent)} of {compact(totalBudget)} budgeted · categories managed in Settings.
+          </p>
+        </div>
+        <button type="button" onClick={startAdd} className="flex items-center gap-[7px] rounded-[10px] px-[14px] py-[9px] text-[12.5px] font-semibold transition hover:opacity-90" style={{ background: "var(--ink)", color: "var(--panel)" }}>
+          + Add Budget
+        </button>
       </div>
 
-      <Modal
-        open={open}
-        title={editing ? "Edit Budget" : "Create Budget"}
-        onClose={() => { setOpen(false); setEditing(null); }}
-      >
+      <Modal open={open} title={editing ? "Edit Budget" : "Create Budget"} onClose={() => { setOpen(false); setEditing(null); }}>
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-          <label className="grid gap-1 text-sm font-medium">
-            Category
-            <Select {...register("category")}>
-              {categoryOptions.map((c) => <option key={c}>{c}</option>)}
-            </Select>
-          </label>
-          <label className="grid gap-1 text-sm font-medium">
-            Monthly Limit (Rp)
-            <Input type="number" min="0" step="any" inputMode="decimal" className="num" {...register("monthly_limit")} />
-          </label>
+          <label className="grid gap-1 text-sm font-medium">Category<Select {...register("category")}>{categoryOptions.map((c) => <option key={c}>{c}</option>)}</Select></label>
+          <label className="grid gap-1 text-sm font-medium">Monthly Limit (Rp)<Input type="number" min="0" step="any" inputMode="decimal" className="num" {...register("monthly_limit")} /></label>
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm font-medium">
-              From date <span className="font-normal text-muted-foreground">(optional)</span>
-              <Input type="date" {...register("period_start")} />
-            </label>
-            <label className="grid gap-1 text-sm font-medium">
-              To date <span className="font-normal text-muted-foreground">(optional)</span>
-              <Input type="date" {...register("period_end")} />
-            </label>
+            <label className="grid gap-1 text-sm font-medium">From date <span className="font-normal text-muted-foreground">(optional)</span><Input type="date" {...register("period_start")} /></label>
+            <label className="grid gap-1 text-sm font-medium">To date <span className="font-normal text-muted-foreground">(optional)</span><Input type="date" {...register("period_end")} /></label>
           </div>
           <p className="text-xs text-muted-foreground">Leave both dates empty to track the current month automatically.</p>
-          <div className="flex justify-end">
-            <Button disabled={pending}>{pending ? "Saving…" : editing ? "Save Budget" : "Add Budget"}</Button>
-          </div>
+          <div className="flex justify-end"><Button disabled={pending}>{pending ? "Saving…" : editing ? "Save Budget" : "Add Budget"}</Button></div>
         </form>
       </Modal>
 
       {usage.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="p-6 text-sm" style={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--muted)" }}>
           Create monthly category limits to see current spending and warnings.
         </div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {usage.map((item: BudgetUsage) => (
-            <div key={item.budget.id} className="rounded-2xl border border-border bg-card p-5">
-              {/* Header */}
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-semibold">{item.budget.category}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {item.budget.period_start && item.budget.period_end
-                      ? `${item.budget.period_start} → ${item.budget.period_end}`
-                      : "This month"}
-                  </p>
+        <div className="grid gap-3.5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(248px, 1fr))" }}>
+          {usage.map((item) => {
+            const tag = statusOf(item);
+            const color = categoryColor(item.budget.category);
+            const remaining = Number(item.budget.monthly_limit) - item.spent;
+            return (
+              <div key={item.budget.id} className="group p-4" style={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: "var(--r)", boxShadow: "var(--sh)" }}>
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-[9px]"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: color }} /><span className="text-[13.5px] font-semibold">{item.budget.category}</span></div>
+                  <span className="num rounded-[6px] px-2 py-[3px] text-[10.5px] font-bold" style={{ background: tag.bg, color: tag.color }}>{tag.label}</span>
                 </div>
-                {statusTag(item.level)}
+                <div className="mb-[11px] flex items-end gap-[7px]">
+                  <div className="num-balance num text-[21px] font-semibold">{compact(item.spent)}</div>
+                  <div className="mb-1 text-[11px]" style={{ color: "var(--faint)" }}>of {compact(Number(item.budget.monthly_limit))}</div>
+                </div>
+                <div className="mb-[11px] h-2 overflow-hidden rounded-[5px]" style={{ background: "var(--soft)" }}>
+                  <div className="h-full rounded-[5px]" style={{ width: `${Math.min(item.percentUsed, 100)}%`, background: tag.bar }} />
+                </div>
+                <div className="flex items-center justify-between text-[11.5px]">
+                  <span style={{ color: "var(--muted)" }}>{formatPercent(item.percentUsed)} used</span>
+                  <span className="num font-semibold" style={{ color: remaining < 0 ? "var(--down)" : "var(--muted)" }}>
+                    {remaining < 0 ? `−${compact(Math.abs(remaining))} over` : `${compact(remaining)} left`}
+                  </span>
+                </div>
+                <div className="mt-3 flex justify-end gap-1.5 opacity-0 transition group-hover:opacity-100">
+                  <button type="button" onClick={() => editBudget(item.budget)} aria-label="Edit" className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ border: "1px solid var(--border)", color: "var(--muted)" }}><Pencil size={13} /></button>
+                  <ConfirmDeleteButton compact itemName={`${item.budget.category} budget`} successMessage="Budget deleted." onConfirm={() => deleteBudget(item.budget.id)} />
+                </div>
               </div>
-
-              {/* Progress bar */}
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
-                <div
-                  className={cn("h-2 rounded-full transition-all", progressColor(item.level))}
-                  style={{ width: `${Math.min(item.percentUsed, 100)}%` }}
-                />
-              </div>
-
-              {/* Stats */}
-              <div className="mt-3 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">
-                  <span className="num font-semibold text-foreground">{formatIDR(item.spent)}</span>
-                  {" "}of {formatIDR(item.budget.monthly_limit)}
-                </span>
-                <span className={cn(
-                  "num font-bold",
-                  item.level === "exceeded" ? "text-red-600" : item.level === "warning" ? "text-orange-600" : "text-muted-foreground"
-                )}>
-                  {formatPercent(item.percentUsed)}
-                </span>
-              </div>
-
-              {/* Remaining */}
-              <p className="mt-1 text-xs text-muted-foreground">
-                {item.remaining > 0
-                  ? <><span className="num font-medium text-emerald-600">{formatIDR(item.remaining)}</span> remaining</>
-                  : <span className="font-medium text-red-600">Over by {formatIDR(item.spent - item.budget.monthly_limit)}</span>
-                }
-              </p>
-
-              {/* Actions */}
-              <div className="mt-4 flex gap-2 border-t border-border pt-3">
-                <Button variant="secondary" className="h-8 px-2.5 text-xs" onClick={() => editBudget(item.budget)}>
-                  <Pencil size={13} /> Edit
-                </Button>
-                <ConfirmDeleteButton
-                  compact
-                  itemName={`${item.budget.category} budget`}
-                  successMessage="Budget deleted."
-                  onConfirm={() => deleteBudget(item.budget.id)}
-                />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
-    </div>
+    </section>
   );
 }

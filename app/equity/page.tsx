@@ -15,12 +15,6 @@ export default async function InvestmentPortfolioPage() {
 
   return (
     <DashboardShell profile={profileResult.data}>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Investment Portfolio</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Driven by your Investment wallets. Log realized trades to update performance and wallet balances.
-        </p>
-      </div>
       <InvestmentManager wallets={accountsResult.data ?? []} trades={tradesResult.data ?? []} />
     </DashboardShell>
   );
