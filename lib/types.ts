@@ -71,6 +71,7 @@ export type Transaction = {
   amount: number;
   fee: number;
   category: string;
+  name: string | null;
   from_account_id: string | null;
   to_account_id: string | null;
   notes: string | null;

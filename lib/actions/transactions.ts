@@ -6,10 +6,7 @@ import { transactionSchema } from "@/lib/validations";
 
 async function requireUser() {
   const supabase = await createClient();
-  const {
-    data: { user },
-    error
-  } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) throw new Error("You must be logged in.");
   return { supabase, user };
 }
@@ -18,7 +15,8 @@ export async function upsertTransaction(input: unknown) {
   const parsed = transactionSchema.parse(input);
   const { supabase, user } = await requireUser();
 
-  const { error } = await supabase.rpc("apply_transaction", {
+  // apply_transaction handles balance updates; returns the transaction id.
+  const { data: txId, error } = await supabase.rpc("apply_transaction", {
     p_transaction_id: parsed.id ?? null,
     p_user_id: user.id,
     p_type: parsed.type,
@@ -32,6 +30,16 @@ export async function upsertTransaction(input: unknown) {
   });
 
   if (error) throw new Error(error.message);
+
+  // Patch the name/merchant field separately (not in RPC signature).
+  if (txId && parsed.name !== undefined) {
+    await supabase
+      .from("transactions")
+      .update({ name: parsed.name ?? null })
+      .eq("id", txId)
+      .eq("user_id", user.id);
+  }
+
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
   revalidatePath("/accounts");

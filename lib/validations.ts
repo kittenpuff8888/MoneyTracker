@@ -16,6 +16,7 @@ export const transactionSchema = z
   .object({
     id: z.string().uuid().optional(),
     type: z.enum(["income", "outcome", "transfer"]),
+    name: z.string().max(80).optional().nullable(),
     amount: z.coerce.number().positive("Amount must be greater than 0"),
     fee: z.coerce.number().min(0, "Fee cannot be negative").default(0),
     category: z.string().min(1, "Category is required"),

@@ -10,6 +10,7 @@ import { upsertTransaction } from "@/lib/actions/transactions";
 import { typedZodResolver } from "@/lib/form-resolver";
 import { transactionSchema } from "@/lib/validations";
 import { transactionCategories, type Account, type Transaction } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import type { z } from "zod";
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
@@ -28,17 +29,13 @@ export function TransactionForm({
   const categoryOptions = categories && categories.length ? categories : [...transactionCategories];
   const defaultCategory = transaction?.category ?? categoryOptions[0] ?? "Other";
   const [pending, startTransition] = useTransition();
-  const {
-    register,
-    handleSubmit,
-    control,
-    reset,
-    formState: { errors }
-  } = useForm<TransactionFormValues>({
+
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<TransactionFormValues>({
     resolver: typedZodResolver<TransactionFormValues>(transactionSchema),
     defaultValues: {
       id: transaction?.id,
       type: transaction?.type ?? "outcome",
+      name: transaction?.name ?? "",
       amount: transaction?.amount ?? 0,
       fee: transaction?.fee ?? 0,
       category: (transaction?.category as TransactionFormValues["category"]) ?? defaultCategory,
@@ -53,6 +50,7 @@ export function TransactionForm({
     reset({
       id: transaction?.id,
       type: transaction?.type ?? "outcome",
+      name: transaction?.name ?? "",
       amount: transaction?.amount ?? 0,
       fee: transaction?.fee ?? 0,
       category: (transaction?.category as TransactionFormValues["category"]) ?? defaultCategory,
@@ -65,12 +63,18 @@ export function TransactionForm({
 
   const type = useWatch({ control, name: "type" });
 
+  const feeLabel =
+    type === "income" ? "Fee (deducted from deposit)"
+    : type === "transfer" ? "Transfer Fee"
+    : "Fee";
+
   function onSubmit(values: TransactionFormValues) {
     startTransition(async () => {
       try {
         await upsertTransaction(values);
         reset({
           type: "outcome",
+          name: "",
           amount: 0,
           fee: 0,
           category: categoryOptions[0] ?? "Other",
@@ -89,69 +93,75 @@ export function TransactionForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Type segmented control */}
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</p>
+        <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
+          {(["outcome", "income", "transfer"] as const).map((t) => (
+            <label
+              key={t}
+              className={cn(
+                "flex cursor-pointer items-center justify-center rounded-lg py-2 text-xs font-semibold transition",
+                type === t
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <input type="radio" {...register("type")} value={t} className="sr-only" />
+              {t === "outcome" ? "Expense" : t === "income" ? "Income" : "Move Money"}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
         <label className="grid gap-1 text-sm font-medium">
-          Type
-          <Select {...register("type")}>
-            <option value="income">Income</option>
-            <option value="outcome">Outcome</option>
-            <option value="transfer">Transfer / Move Money</option>
-          </Select>
+          Name / Merchant
+          <Input placeholder="e.g. Grab, Indomaret…" {...register("name")} />
         </label>
         <label className="grid gap-1 text-sm font-medium">
-          Amount
-          <Input type="number" min="0" step="any" inputMode="decimal" {...register("amount")} />
-          {errors.amount && <span className="text-xs text-red-600">{errors.amount.message}</span>}
-        </label>
-        <label className="grid gap-1 text-sm font-medium">
-          Category
-          <Select {...register("category")}>
-            {categoryOptions.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </Select>
+          Amount (Rp)
+          <Input type="number" min="0" step="any" inputMode="decimal" className="num" {...register("amount")} />
+          {errors.amount && <span className="text-xs text-danger">{errors.amount.message}</span>}
         </label>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
+        {type !== "transfer" && (
+          <label className="grid gap-1 text-sm font-medium">
+            Category
+            <Select {...register("category")}>
+              {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+            </Select>
+          </label>
+        )}
         <label className="grid gap-1 text-sm font-medium">
-          {type === "income" ? "Fee (deducted from deposit)" : type === "transfer" ? "Transfer Fee" : "Fee"}
-          <Input type="number" min="0" step="any" inputMode="decimal" {...register("fee")} />
-          {errors.fee && <span className="text-xs text-red-600">{errors.fee.message}</span>}
-        </label>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <label className="grid gap-1 text-sm font-medium">
-          From Account
-          <Select {...register("from_account_id")} disabled={type === "income"}>
-            <option value="">Select account</option>
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-          </Select>
-          {errors.from_account_id && <span className="text-xs text-red-600">{errors.from_account_id.message}</span>}
-        </label>
-        <label className="grid gap-1 text-sm font-medium">
-          To Account
-          <Select {...register("to_account_id")} disabled={type === "outcome"}>
-            <option value="">Select account</option>
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-          </Select>
-          {errors.to_account_id && <span className="text-xs text-red-600">{errors.to_account_id.message}</span>}
+          {feeLabel}
+          <Input type="number" min="0" step="any" inputMode="decimal" className="num" {...register("fee")} />
         </label>
         <label className="grid gap-1 text-sm font-medium">
           Date
           <Input type="date" {...register("transaction_date")} />
-          {errors.transaction_date && <span className="text-xs text-red-600">{errors.transaction_date.message}</span>}
+          {errors.transaction_date && <span className="text-xs text-danger">{errors.transaction_date.message}</span>}
+        </label>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="grid gap-1 text-sm font-medium">
+          From Wallet
+          <Select {...register("from_account_id")} disabled={type === "income"}>
+            <option value="">Select wallet</option>
+            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </Select>
+          {errors.from_account_id && <span className="text-xs text-danger">{errors.from_account_id.message}</span>}
+        </label>
+        <label className="grid gap-1 text-sm font-medium">
+          To Wallet
+          <Select {...register("to_account_id")} disabled={type === "outcome"}>
+            <option value="">Select wallet</option>
+            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </Select>
+          {errors.to_account_id && <span className="text-xs text-danger">{errors.to_account_id.message}</span>}
         </label>
       </div>
 
@@ -163,7 +173,7 @@ export function TransactionForm({
       <div className="flex justify-end">
         <Button type="submit" disabled={pending || accounts.length === 0}>
           <Save size={16} />
-          {pending ? "Saving..." : transaction ? "Save Changes" : "Add Transaction"}
+          {pending ? "Saving…" : transaction ? "Save Changes" : "Add Transaction"}
         </Button>
       </div>
     </form>

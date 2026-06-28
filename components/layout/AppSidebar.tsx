@@ -13,6 +13,7 @@ import {
   WalletCards
 } from "lucide-react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { AddTransactionModal } from "@/components/transactions/AddTransactionModal";
 import { cn } from "@/lib/utils";
 
 const overview = [
@@ -23,62 +24,72 @@ const overview = [
   { href: "/budget", label: "Budgets", icon: PieChart }
 ];
 
-const account = [
+const accountNav = [
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/reports", label: "Help & Guide", icon: HelpCircle }
 ];
 
-export function AppSidebar() {
+function NavItem({ item }: { item: { href: string; label: string; icon: typeof LayoutGrid } }) {
   const pathname = usePathname();
-
-  function NavItem({ item }: { item: { href: string; label: string; icon: typeof LayoutGrid } }) {
-    const Icon = item.icon;
-    const active = pathname === item.href;
-    return (
-      <Link
-        href={item.href}
-        className={cn(
-          "flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition",
-          active
-            ? "border border-border bg-white text-foreground shadow-card"
-            : "text-muted-foreground hover:bg-white/70 hover:text-foreground"
-        )}
-      >
-        <Icon size={18} className={active ? "text-blue-600" : ""} />
-        {item.label}
-      </Link>
-    );
-  }
-
+  const Icon = item.icon;
+  const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-border bg-[#fbfcfd] px-3 py-5 md:flex xl:w-72 xl:px-4">
+    <Link
+      href={item.href}
+      className={cn(
+        "flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors",
+        active
+          ? "bg-[hsl(var(--foreground))] text-[hsl(var(--card))]"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      )}
+    >
+      <Icon
+        size={17}
+        className={cn(active ? "opacity-90" : "")}
+      />
+      {item.label}
+    </Link>
+  );
+}
+
+export function AppSidebar() {
+  return (
+    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col overflow-y-auto border-r border-border px-3 py-5 md:flex xl:w-64 xl:px-4">
+      {/* Logo */}
       <Link href="/dashboard" className="mb-7 flex items-center gap-3 px-1">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#0b0e14] text-sm font-bold tracking-tight text-white">88</span>
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-foreground text-sm font-bold tracking-tight text-card">
+          88
+        </span>
         <div className="min-w-0">
-          <p className="text-[15px] font-bold leading-tight tracking-tight">8888 Tracker</p>
-          <p className="text-xs text-muted-foreground">Personal finance</p>
+          <p className="text-[14px] font-bold leading-tight tracking-tight">8888 Tracker</p>
+          <p className="text-[11px] text-muted-foreground">Personal finance</p>
         </div>
       </Link>
 
+      {/* Overview nav */}
       <p className="eyebrow mb-2 px-2">Overview</p>
-      <nav className="space-y-1">
+      <nav className="space-y-0.5">
         {overview.map((item) => (
           <NavItem key={item.href} item={item} />
         ))}
       </nav>
 
-      <Link
-        href="/transactions"
-        className="mt-4 flex h-11 items-center justify-center gap-2 rounded-lg bg-[#0b0e14] px-4 text-sm font-semibold text-white transition hover:bg-[#1c2230]"
-      >
-        <Plus size={16} />
-        Add Transaction
-      </Link>
+      {/* Add Transaction — slide-in modal trigger */}
+      <AddTransactionModal>
+        <button
+          type="button"
+          className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 text-sm font-semibold text-card transition hover:opacity-90"
+        >
+          <Plus size={15} />
+          Add Transaction
+        </button>
+      </AddTransactionModal>
 
+      {/* Account nav */}
       <p className="eyebrow mb-2 mt-7 px-2">Account</p>
-      <nav className="space-y-1">
-        {account.map((item) => (
-          <NavItem key={`${item.href}-${item.label}`} item={item} />
+      <nav className="space-y-0.5">
+        {accountNav.map((item) => (
+          <NavItem key={item.href} item={item} />
         ))}
       </nav>
 

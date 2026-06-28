@@ -2,30 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 8888 Tracker design tokens (from reference): neutral canvas, white panels,
-   blue accent, hairline borders, mono numerals, serif display. */
+/* ─── Design tokens ─────────────────────────────────────────── */
 :root {
-  --background: 220 16% 94%;        /* #eef0f3 */
-  --foreground: 220 30% 6%;         /* #0b0e14 */
-  --card: 0 0% 100%;                /* #ffffff */
+  --background: 220 16% 94%;        /* #eef0f3 — frame */
+  --foreground: 220 30% 6%;         /* #0b0e14 — ink */
+  --card: 0 0% 100%;                /* #ffffff — panel */
   --border: 223 14% 92%;            /* #e7e9ee */
   --muted: 210 20% 97%;             /* #f4f6f9 */
   --muted-foreground: 217 13% 40%;  /* #5b6472 */
-  --primary: 221 83% 53%;           /* #2563eb */
+  --primary: 221 83% 53%;           /* #2563eb — blue accent */
   --primary-foreground: 0 0% 100%;
   --accent: 221 83% 53%;
-  --success: 221 83% 53%;
+  --success: 160 60% 40%;           /* #22c55e */
   --warning: 35 92% 51%;            /* #f59e0b */
   --danger: 358 75% 59%;            /* #e5484d */
+  --ink: 220 30% 6%;                /* #0b0e14 — nav/button */
+  --shell-radius: 1.625rem;         /* 26px outer shell */
 }
 
-* {
-  box-sizing: border-box;
+.dark {
+  --background: 222 28% 8%;         /* #0f1117 */
+  --foreground: 210 20% 94%;        /* #edf0f5 */
+  --card: 222 24% 12%;              /* #181d27 */
+  --border: 220 18% 20%;            /* #282f3e */
+  --muted: 222 22% 15%;             /* #1c2230 */
+  --muted-foreground: 216 14% 55%;  /* #7d8fa3 */
+  --primary: 221 83% 60%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 221 83% 60%;
+  --success: 160 60% 45%;
+  --warning: 35 92% 55%;
+  --danger: 358 75% 63%;
+  --ink: 210 20% 94%;               /* invert for dark: labels become light */
 }
 
-html {
-  scroll-behavior: smooth;
-}
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
@@ -36,21 +49,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
+button, input, select, textarea { font: inherit; }
 
-/* Monospace, tabular figures for financial numbers (JetBrains Mono). */
+/* ── Utility: monospace tabular figures for all amounts ─── */
 .num {
   font-family: var(--font-mono), ui-monospace, "JetBrains Mono", monospace;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
 
-/* Small uppercase section/stat labels seen throughout the design. */
+/* ── Utility: small uppercase eyebrow labels ─── */
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -59,11 +67,19 @@ textarea {
   color: hsl(var(--muted-foreground));
 }
 
-/* Newsreader serif for occasional display headings. */
+/* ── Utility: Newsreader serif for display headings ─── */
 .display-serif {
   font-family: var(--font-serif), Georgia, serif;
 }
 
+/* ── Masked balance (hide-balances toggle) ─── */
+.balances-hidden .num-balance {
+  filter: blur(6px);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ── Subtle dot-grid on frame background ─── */
 .sky-grid {
   background-image:
     linear-gradient(rgba(37, 99, 235, 0.06) 1px, transparent 1px),
@@ -71,17 +87,35 @@ textarea {
   background-size: 32px 32px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
+/* ── Scrollbar thinning ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
 
-  *,
-  *::before,
-  *::after {
+/* ── Topbar icon button ─── */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.625rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  transition: color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+.icon-btn:hover {
+  background: hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
 }

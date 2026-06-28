@@ -2,11 +2,34 @@
 
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { ConfirmDeleteButton } from "@/components/ui/ConfirmDeleteButton";
 import { deleteTransaction } from "@/lib/actions/transactions";
 import { formatIDR } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 import type { Account, Transaction } from "@/lib/types";
+
+function TypePill({ type }: { type: Transaction["type"] }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+        type === "income" && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+        type === "outcome" && "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+        type === "transfer" && "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+      )}
+    >
+      {type === "transfer" ? "Move" : type === "income" ? "In" : "Out"}
+    </span>
+  );
+}
+
+function CategoryPill({ name }: { name: string }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+      {name}
+    </span>
+  );
+}
 
 export function TransactionTable({
   transactions,
@@ -17,109 +40,98 @@ export function TransactionTable({
   accounts: Account[];
   onEdit?: (transaction: Transaction) => void;
 }) {
-  const accountName = (id: string | null) => accounts.find((account) => account.id === id)?.name ?? "-";
+  const accountName = (id: string | null) => accounts.find((a) => a.id === id)?.name ?? "—";
 
   return (
     <>
-      <div className="grid gap-3 md:hidden">
-        {transactions.map((transaction) => (
-          <article key={transaction.id} className="rounded-lg border border-border bg-white p-4 shadow-card">
+      {/* Mobile cards */}
+      <div className="grid gap-2 md:hidden">
+        {transactions.map((t) => (
+          <article key={t.id} className="rounded-xl border border-border bg-card p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <Badge tone={transaction.type === "income" ? "green" : transaction.type === "outcome" ? "orange" : "sky"}>
-                  {transaction.type === "transfer" ? "Transfer" : transaction.type === "income" ? "Income" : "Outcome"}
-                </Badge>
-                <h2 className="mt-2 truncate text-base font-semibold">{transaction.category}</h2>
-                <p className="mt-1 text-xs text-muted-foreground">{transaction.transaction_date}</p>
-              </div>
-              <p className="shrink-0 text-right text-base font-bold">{formatIDR(transaction.amount)}</p>
-            </div>
-            <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-3 text-xs">
-              <div>
-                <dt className="text-muted-foreground">From</dt>
-                <dd className="mt-1 truncate font-medium">{accountName(transaction.from_account_id)}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">To</dt>
-                <dd className="mt-1 truncate font-medium">{accountName(transaction.to_account_id)}</dd>
-              </div>
-              {Number(transaction.fee ?? 0) > 0 ? (
-                <div>
-                  <dt className="text-muted-foreground">Fee</dt>
-                  <dd className="mt-1 truncate font-medium">{formatIDR(transaction.fee)}</dd>
+                <div className="flex items-center gap-2">
+                  <TypePill type={t.type} />
+                  <CategoryPill name={t.category} />
                 </div>
-              ) : null}
-            </dl>
-            {transaction.notes ? <p className="mt-3 break-words text-sm text-muted-foreground">{transaction.notes}</p> : null}
-            <div className="mt-4 flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                aria-label={`Edit ${transaction.category} transaction`}
-                className="h-11 w-11 px-0"
-                onClick={() => onEdit?.(transaction)}
-              >
-                <Pencil size={16} />
+                <p className="mt-1.5 truncate font-semibold">{t.name || t.category}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t.transaction_date}</p>
+              </div>
+              <p className={cn(
+                "num shrink-0 text-right font-bold",
+                t.type === "income" ? "text-emerald-600" : t.type === "outcome" ? "text-red-600" : "text-foreground"
+              )}>
+                {t.type === "outcome" ? "−" : t.type === "income" ? "+" : ""}{formatIDR(t.amount)}
+              </p>
+            </div>
+            <div className="mt-3 flex justify-end gap-2 border-t border-border pt-3">
+              <Button type="button" variant="secondary" className="h-9 px-3" onClick={() => onEdit?.(t)}>
+                <Pencil size={13} /> Edit
               </Button>
               <ConfirmDeleteButton
                 compact
-                itemName={`${transaction.category} transaction`}
-                successMessage="Transaction deleted and account balances updated."
-                onConfirm={() => deleteTransaction(transaction.id)}
+                itemName={`${t.name || t.category} transaction`}
+                successMessage="Transaction deleted and balances updated."
+                onConfirm={() => deleteTransaction(t.id)}
               />
             </div>
           </article>
         ))}
       </div>
 
-      <div className="hidden overflow-hidden rounded-lg border border-border bg-white md:block">
+      {/* Desktop table */}
+      <div className="hidden overflow-hidden rounded-xl border border-border bg-card md:block">
         <div className="overflow-x-auto">
-        <table className="w-full min-w-[860px] text-left text-sm">
-          <thead className="bg-sky-50 text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Category</th>
-              <th className="px-4 py-3">From Account</th>
-              <th className="px-4 py-3">To Account</th>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Amount</th>
-              <th className="px-4 py-3">Fee</th>
-              <th className="px-4 py-3">Notes</th>
-              <th className="px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {transactions.map((transaction) => (
-              <tr key={transaction.id}>
-                <td className="px-4 py-3">
-                  <Badge tone={transaction.type === "income" ? "green" : transaction.type === "outcome" ? "orange" : "sky"}>
-                    {transaction.type === "transfer" ? "Transfer / Move Money" : transaction.type === "income" ? "Income" : "Outcome"}
-                  </Badge>
-                </td>
-                <td className="px-4 py-3 font-medium">{transaction.category}</td>
-                <td className="px-4 py-3 text-muted-foreground">{accountName(transaction.from_account_id)}</td>
-                <td className="px-4 py-3 text-muted-foreground">{accountName(transaction.to_account_id)}</td>
-                <td className="px-4 py-3">{transaction.transaction_date}</td>
-                <td className="px-4 py-3 font-semibold">{formatIDR(transaction.amount)}</td>
-                <td className="px-4 py-3 text-muted-foreground">{Number(transaction.fee ?? 0) > 0 ? formatIDR(transaction.fee) : "-"}</td>
-                <td className="max-w-52 truncate px-4 py-3 text-muted-foreground">{transaction.notes ?? "-"}</td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-2">
-                    <Button type="button" variant="secondary" className="h-8 px-3" onClick={() => onEdit?.(transaction)}>
-                      <Pencil size={14} />
-                      Edit
-                    </Button>
-                    <ConfirmDeleteButton
-                      itemName={`${transaction.category} transaction`}
-                      successMessage="Transaction deleted and account balances updated."
-                      onConfirm={() => deleteTransaction(transaction.id)}
-                    />
-                  </div>
-                </td>
+          <table className="w-full min-w-[900px] text-left text-sm">
+            <thead className="border-b border-border bg-muted">
+              <tr>
+                {["Date", "Merchant", "Category", "Type", "Wallet", "Fee", "Amount", ""].map((h) => (
+                  <th key={h} className="eyebrow px-4 py-3">{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {transactions.map((t) => {
+                const wallet = t.type === "income"
+                  ? accountName(t.to_account_id)
+                  : accountName(t.from_account_id);
+                const amtColor = t.type === "income"
+                  ? "text-emerald-600"
+                  : t.type === "outcome"
+                  ? "text-red-600"
+                  : "text-foreground";
+
+                return (
+                  <tr key={t.id} className="transition-colors hover:bg-muted/50">
+                    <td className="num px-4 py-3 text-muted-foreground">{t.transaction_date}</td>
+                    <td className="px-4 py-3 font-medium">{t.name || "—"}</td>
+                    <td className="px-4 py-3"><CategoryPill name={t.category} /></td>
+                    <td className="px-4 py-3"><TypePill type={t.type} /></td>
+                    <td className="px-4 py-3 text-muted-foreground">{wallet}</td>
+                    <td className="num px-4 py-3 text-muted-foreground">
+                      {Number(t.fee ?? 0) > 0 ? formatIDR(t.fee) : "—"}
+                    </td>
+                    <td className={cn("num px-4 py-3 font-semibold", amtColor)}>
+                      {t.type === "outcome" ? "−" : t.type === "income" ? "+" : ""}{formatIDR(t.amount)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1.5">
+                        <Button type="button" variant="secondary" className="h-8 px-2.5" onClick={() => onEdit?.(t)}>
+                          <Pencil size={13} />
+                        </Button>
+                        <ConfirmDeleteButton
+                          compact
+                          itemName={`${t.name || t.category} transaction`}
+                          successMessage="Transaction deleted and balances updated."
+                          onConfirm={() => deleteTransaction(t.id)}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </>

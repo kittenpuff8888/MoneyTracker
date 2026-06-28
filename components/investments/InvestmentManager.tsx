@@ -2,10 +2,9 @@
 
 import { Fragment, useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Save, TrendingUp, X } from "lucide-react";
+import { Plus, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
-import { Card, CardContent } from "@/components/ui/Card";
 import { Input, Select } from "@/components/ui/Input";
 import { ConfirmDeleteButton } from "@/components/ui/ConfirmDeleteButton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -13,6 +12,7 @@ import { upsertTrade, deleteTrade } from "@/lib/actions/trades";
 import { typedZodResolver } from "@/lib/form-resolver";
 import { realizedTradeSchema } from "@/lib/validations";
 import { formatIDR } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 import type { Account, RealizedTrade } from "@/lib/types";
 import type { z } from "zod";
 
@@ -23,22 +23,32 @@ function num(v: number | string | null | undefined) {
   return Number.isFinite(n) ? n : 0;
 }
 
-function monthKey(date: string) {
-  return date.slice(0, 7); // yyyy-MM
-}
-
+function monthKey(date: string) { return date.slice(0, 7); }
 function monthLabel(key: string) {
   const [y, m] = key.split("-");
-  const d = new Date(Number(y), Number(m) - 1, 1);
-  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+function PnlBadge({ value }: { value: number }) {
+  return (
+    <span className={cn(
+      "num inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+      value >= 0
+        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+        : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+    )}>
+      {value >= 0 ? "+" : ""}{formatIDR(value)}
+    </span>
+  );
 }
 
 export function InvestmentManager({ wallets, trades }: { wallets: Account[]; trades: RealizedTrade[] }) {
   const [open, setOpen] = useState(false);
 
   const tradingBalance = wallets.reduce((sum, w) => sum + num(w.current_balance), 0);
+  const totalInvested = wallets.reduce((sum, w) => sum + num(w.starting_balance), 0);
   const netPnl = trades.reduce((sum, t) => sum + num(t.realized_pnl), 0);
-  const totalFees = trades.reduce((sum, t) => sum + num(t.total_fee), 0);
+  const openPositions = wallets.length;
   const walletName = (id: string | null) => wallets.find((w) => w.id === id)?.name ?? "—";
 
   const grouped = useMemo(() => {
@@ -51,74 +61,83 @@ export function InvestmentManager({ wallets, trades }: { wallets: Account[]; tra
     return Array.from(map.entries());
   }, [trades]);
 
+  const summaryItems = [
+    { label: "Portfolio Balance", value: formatIDR(tradingBalance), mono: true },
+    { label: "Total Invested", value: formatIDR(totalInvested), mono: true },
+    { label: "Open Positions", value: String(openPositions), mono: true },
+    { label: "Net Realized P&L", value: formatIDR(netPnl), mono: true, color: netPnl >= 0 ? "text-emerald-400" : "text-red-400" },
+    { label: "Total Equity", value: formatIDR(tradingBalance + netPnl), mono: true }
+  ];
+
   return (
-    <div className="grid gap-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card><CardContent><p className="text-sm text-muted-foreground">Trading Balance</p><p className="mt-2 text-2xl font-bold">{formatIDR(tradingBalance)}</p></CardContent></Card>
-        <Card><CardContent><p className="text-sm text-muted-foreground">Net Realized P&amp;L</p><p className={netPnl >= 0 ? "mt-2 text-2xl font-bold text-emerald-600" : "mt-2 text-2xl font-bold text-rose-600"}>{formatIDR(netPnl)}</p></CardContent></Card>
-        <Card><CardContent><p className="text-sm text-muted-foreground">Total Fees</p><p className="mt-2 text-2xl font-bold">{formatIDR(totalFees)}</p></CardContent></Card>
-        <Card><CardContent><p className="text-sm text-muted-foreground">Total Equity</p><p className="mt-2 text-2xl font-bold">{formatIDR(tradingBalance)}</p></CardContent></Card>
+    <div className="grid gap-5">
+      {/* Summary strip */}
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-5">
+        {summaryItems.map((item) => (
+          <div key={item.label} className="flex flex-col gap-1 bg-card px-4 py-4">
+            <p className="eyebrow">{item.label}</p>
+            <p className={cn("num mt-1 text-lg font-bold", item.color)}>{item.value}</p>
+          </div>
+        ))}
       </div>
 
+      {/* Header row */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Realized Trades</h2>
-          <p className="text-sm text-muted-foreground">Each trade updates the linked Investment wallet balance.</p>
+          <h2 className="text-base font-semibold">Realized Trades</h2>
+          <p className="text-xs text-muted-foreground">Each trade updates the linked Investment wallet balance.</p>
         </div>
         <Button type="button" onClick={() => setOpen(true)} disabled={wallets.length === 0}>
-          <Plus size={16} />
-          Add Trade
+          <Plus size={15} /> Add Trade
         </Button>
       </div>
 
       {wallets.length === 0 ? (
-        <EmptyState
-          title="No Investment wallet yet."
-          description="Create a wallet with type Investment on the Wallet page first, then log trades here."
-        />
+        <EmptyState title="No Investment wallet yet." description='Create a wallet with type "Investment" on the Wallet page first.' />
       ) : trades.length === 0 ? (
-        <EmptyState title="No trades logged yet." description="Add your first realized trade to start tracking performance." />
+        <EmptyState title="No trades logged yet." description="Add your first realized trade to track performance." />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-white">
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[920px] text-left text-sm">
-              <thead className="bg-sky-50 text-xs uppercase text-muted-foreground">
+            <table className="w-full min-w-[960px] text-left text-sm">
+              <thead className="border-b border-border bg-muted">
                 <tr>
-                  <th className="px-3 py-3">Ordered Items</th>
-                  <th className="px-3 py-3">Wallet Type</th>
-                  <th className="px-3 py-3 text-right">Lot Done</th>
-                  <th className="px-3 py-3 text-right">Price</th>
-                  <th className="px-3 py-3 text-right">Amount Done</th>
-                  <th className="px-3 py-3 text-right">Total Fee</th>
-                  <th className="px-3 py-3 text-right">Net Amount</th>
-                  <th className="px-3 py-3 text-right">Realized P&amp;L</th>
-                  <th className="px-3 py-3">Date</th>
-                  <th className="px-3 py-3"></th>
+                  {["Ordered Item", "Wallet", "Lot", "Price", "Amount", "Fee", "Net", "Realized P&L", "Date", ""].map((h) => (
+                    <th key={h} className="eyebrow px-3 py-3">{h}</th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody>
                 {grouped.map(([key, list]) => {
                   const monthPnl = list.reduce((sum, t) => sum + num(t.realized_pnl), 0);
                   return (
                     <Fragment key={key}>
-                      <tr className="bg-slate-50">
-                        <td colSpan={7} className="px-3 py-2 text-xs font-semibold uppercase text-muted-foreground">{monthLabel(key)}</td>
-                        <td className={monthPnl >= 0 ? "px-3 py-2 text-right text-xs font-semibold text-emerald-600" : "px-3 py-2 text-right text-xs font-semibold text-rose-600"}>{formatIDR(monthPnl)}</td>
-                        <td colSpan={2}></td>
+                      {/* Month group header */}
+                      <tr className="bg-muted/60">
+                        <td colSpan={7} className="px-3 py-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            {monthLabel(key)}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <PnlBadge value={monthPnl} />
+                        </td>
+                        <td colSpan={2} />
                       </tr>
+
                       {list.map((t) => {
                         const pnl = num(t.realized_pnl);
                         return (
-                          <tr key={t.id}>
+                          <tr key={t.id} className="border-t border-border transition-colors hover:bg-muted/30">
                             <td className="px-3 py-3 font-semibold">{t.ordered_item}</td>
                             <td className="px-3 py-3 text-muted-foreground">{walletName(t.wallet_id)}</td>
-                            <td className="px-3 py-3 text-right">{num(t.lot)}</td>
-                            <td className="px-3 py-3 text-right">{num(t.price).toLocaleString("id-ID")}</td>
-                            <td className="px-3 py-3 text-right">{num(t.amount_done).toLocaleString("id-ID")}</td>
-                            <td className="px-3 py-3 text-right">{num(t.total_fee).toLocaleString("id-ID")}</td>
-                            <td className="px-3 py-3 text-right">{num(t.net_amount).toLocaleString("id-ID")}</td>
-                            <td className={pnl >= 0 ? "px-3 py-3 text-right font-medium text-emerald-600" : "px-3 py-3 text-right font-medium text-rose-600"}>{formatIDR(pnl)}</td>
-                            <td className="px-3 py-3 whitespace-nowrap">{t.trade_date}</td>
+                            <td className="num px-3 py-3 text-right">{num(t.lot)}</td>
+                            <td className="num px-3 py-3 text-right">{num(t.price).toLocaleString("id-ID")}</td>
+                            <td className="num px-3 py-3 text-right">{num(t.amount_done).toLocaleString("id-ID")}</td>
+                            <td className="num px-3 py-3 text-right text-muted-foreground">{num(t.total_fee).toLocaleString("id-ID")}</td>
+                            <td className="num px-3 py-3 text-right">{num(t.net_amount).toLocaleString("id-ID")}</td>
+                            <td className="px-3 py-3"><PnlBadge value={pnl} /></td>
+                            <td className="num px-3 py-3 whitespace-nowrap text-muted-foreground">{t.trade_date}</td>
                             <td className="px-3 py-3">
                               <ConfirmDeleteButton
                                 compact
@@ -139,7 +158,7 @@ export function InvestmentManager({ wallets, trades }: { wallets: Account[]; tra
         </div>
       )}
 
-      {open ? <TradeModal wallets={wallets} onClose={() => setOpen(false)} /> : null}
+      {open && <TradeModal wallets={wallets} onClose={() => setOpen(false)} />}
     </div>
   );
 }
@@ -175,40 +194,50 @@ function TradeModal({ wallets, onClose }: { wallets: Account[]; onClose: () => v
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center p-4">
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-slate-950/40" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-xl rounded-xl bg-white p-5 shadow-2xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="flex items-center gap-2 text-base font-semibold"><TrendingUp size={18} className="text-sky-600" /> Add Realized Trade</h3>
-          <button type="button" aria-label="Close" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-md text-muted-foreground hover:bg-slate-100"><X size={18} /></button>
+      <button type="button" aria-label="Close" className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-lg rounded-2xl bg-card p-5 shadow-2xl">
+        <div className="mb-5 flex items-center justify-between">
+          <h3 className="text-base font-semibold">Add Realized Trade</h3>
+          <button type="button" aria-label="Close" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted">
+            <X size={17} />
+          </button>
         </div>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-1 text-sm font-medium sm:col-span-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:col-span-2">
             Investment Wallet
             <Select {...register("wallet_id")}>
-              {wallets.map((w) => (
-                <option key={w.id} value={w.id}>{w.name}</option>
-              ))}
+              {wallets.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
             </Select>
-            {errors.wallet_id && <span className="text-xs text-rose-600">{errors.wallet_id.message}</span>}
+            {errors.wallet_id && <span className="text-xs text-danger">{errors.wallet_id.message}</span>}
           </label>
-          <label className="grid gap-1 text-sm font-medium">
+          <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Ordered Item
             <Input placeholder="e.g. ENRG" {...register("ordered_item")} />
-            {errors.ordered_item && <span className="text-xs text-rose-600">{errors.ordered_item.message}</span>}
+            {errors.ordered_item && <span className="text-xs text-danger">{errors.ordered_item.message}</span>}
           </label>
-          <label className="grid gap-1 text-sm font-medium">
+          <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Date
             <Input type="date" {...register("trade_date")} />
           </label>
-          <label className="grid gap-1 text-sm font-medium">Lot Done<Input type="number" step="any" inputMode="decimal" {...register("lot")} /></label>
-          <label className="grid gap-1 text-sm font-medium">Price<Input type="number" step="any" inputMode="decimal" {...register("price")} /></label>
-          <label className="grid gap-1 text-sm font-medium">Amount Done<Input type="number" step="any" inputMode="decimal" {...register("amount_done")} /></label>
-          <label className="grid gap-1 text-sm font-medium">Total Fee<Input type="number" step="any" inputMode="decimal" {...register("total_fee")} /></label>
-          <label className="grid gap-1 text-sm font-medium">Net Amount<Input type="number" step="any" inputMode="decimal" {...register("net_amount")} /></label>
-          <label className="grid gap-1 text-sm font-medium">Realized P&amp;L<Input type="number" step="any" inputMode="decimal" {...register("realized_pnl")} /></label>
+          {[
+            { label: "Lot", field: "lot" },
+            { label: "Price", field: "price" },
+            { label: "Amount Done", field: "amount_done" },
+            { label: "Total Fee", field: "total_fee" },
+            { label: "Net Amount", field: "net_amount" },
+            { label: "Realized P&L", field: "realized_pnl" }
+          ].map(({ label, field }) => (
+            <label key={field} className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {label}
+              <Input type="number" step="any" inputMode="decimal" className="num" {...register(field as keyof TradeValues)} />
+            </label>
+          ))}
           <div className="flex justify-end gap-2 sm:col-span-2">
             <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={pending}><Save size={16} />{pending ? "Saving..." : "Save Trade"}</Button>
+            <Button type="submit" disabled={pending}>
+              <Save size={15} />
+              {pending ? "Saving…" : "Save Trade"}
+            </Button>
           </div>
         </form>
       </div>
