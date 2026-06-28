@@ -24,26 +24,27 @@ export function IncomeOutcomeChart({ data }: { data: DataPoint[] }) {
               <stop offset="95%" stopColor="#e5484d" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 14% 91%)" />
+          <CartesianGrid strokeDasharray="3 4" stroke="rgba(128,138,160,0.22)" />
           <XAxis
             dataKey="month"
             tickLine={false}
             axisLine={false}
-            tick={{ fontSize: 11, fill: "#7d8fa3", fontFamily: "var(--font-mono)" }}
+            tick={{ fontSize: 11, fill: "#8a93a3", fontFamily: "var(--font-mono)" }}
           />
           <YAxis
             tickFormatter={compactIDR}
             tickLine={false}
             axisLine={false}
-            tick={{ fontSize: 11, fill: "#7d8fa3", fontFamily: "var(--font-mono)" }}
+            tick={{ fontSize: 11, fill: "#8a93a3", fontFamily: "var(--font-mono)" }}
             width={76}
           />
           <Tooltip
             formatter={(value, name) => [formatIDR(Number(value ?? 0)), name]}
             contentStyle={{
               borderRadius: 12,
-              border: "1px solid hsl(223 14% 92%)",
-              background: "#fff",
+              border: "1px solid var(--border)",
+              background: "var(--panel)",
+              color: "var(--text)",
               fontSize: 12
             }}
           />

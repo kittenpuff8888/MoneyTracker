@@ -31,7 +31,6 @@ export function AppTopbar({ name, email, avatarUrl }: AppTopbarProps) {
 
   const [dark, setDark] = useState(false);
   const [hidden, setHidden] = useState(false);
-  const [lang, setLang] = useState<"ID" | "EN">("ID");
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
   const [rangeOpen, setRangeOpen] = useState(false);
   const rangeRef = useRef<HTMLDivElement>(null);
@@ -259,16 +258,6 @@ export function AppTopbar({ name, email, avatarUrl }: AppTopbarProps) {
             ) : (
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>
             )}
-          </button>
-
-          <button
-            type="button"
-            title="Toggle language"
-            onClick={() => setLang((v) => (v === "ID" ? "EN" : "ID"))}
-            className="num flex h-[34px] items-center rounded-lg px-[11px] text-[12px] font-semibold"
-            style={{ border: "1px solid var(--border)", color: "var(--text)" }}
-          >
-            {lang}
           </button>
 
           {/* Avatar */}

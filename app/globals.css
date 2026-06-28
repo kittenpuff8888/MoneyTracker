@@ -98,10 +98,22 @@ button, input, select, textarea { font: inherit; }
 
 .display-serif { font-family: var(--serif); }
 
-/* ── Masked balance (hide-balances toggle) ── */
+/* ── Masked balance (hide-balances toggle) — dotted mask, not blur ── */
 .balances-hidden .num-balance {
-  filter: blur(6px);
+  position: relative;
+  color: transparent !important;
   user-select: none;
+}
+.balances-hidden .num-balance::after {
+  content: "••••••";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  color: var(--muted);
+  font-size: 0.5em;
+  letter-spacing: 0.18em;
   pointer-events: none;
 }
 

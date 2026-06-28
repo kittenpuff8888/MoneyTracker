@@ -107,15 +107,20 @@ export const categorySchema = z.object({
 
 export { weekdays };
 
-export const realizedTradeSchema = z.object({
-  id: z.string().uuid().optional(),
-  wallet_id: z.string().uuid({ message: "Select an investment wallet" }),
-  ordered_item: z.string().min(1, "Item is required").max(40),
-  lot: z.coerce.number().min(0).default(0),
-  price: z.coerce.number().min(0).default(0),
-  amount_done: z.coerce.number().min(0).default(0),
-  total_fee: z.coerce.number().min(0).default(0),
-  net_amount: z.coerce.number().default(0),
-  realized_pnl: z.coerce.number().default(0),
-  trade_date: z.string().min(1, "Trade date is required")
-});
+export const realizedTradeSchema = z
+  .object({
+    id: z.string().uuid().optional(),
+    wallet_id: z.string().uuid({ message: "Select an investment wallet" }),
+    ordered_item: z.string().min(1, "Ticker is required").max(40),
+    status: z.enum(["open", "realized"]).default("realized"),
+    entry_price: z.coerce.number().min(0, "Entry price is required").default(0),
+    exit_price: z.coerce.number().min(0).optional().nullable(),
+    total_fee: z.coerce.number().min(0).default(0),
+    realized_pnl: z.coerce.number().default(0),
+    trade_date: z.string().min(1, "Trade date is required")
+  })
+  .superRefine((value, ctx) => {
+    if (value.status === "realized" && (value.exit_price == null || value.exit_price === 0)) {
+      ctx.addIssue({ code: "custom", path: ["exit_price"], message: "Exit price is required for a realized trade" });
+    }
+  });

@@ -75,7 +75,53 @@ export async function generateBudgetInsightFromData(
 
   const fallback = buildFallbackInsight({ period, income, outcome, savingsRate, topCategories, unusual, overspendingWarnings, intelligence, subscriptions, budgets });
 
-  if (!options.useExternalAi || !process.env.AI_API_KEY) return fallback;
+  const financeContext = {
+    period,
+    income,
+    outcome,
+    savingsRate,
+    topCategories,
+    unusual,
+    overspendingWarnings,
+    financialHealthScore: intelligence.financialHealthScore,
+    financialHealthExplanation: intelligence.financialHealthExplanation,
+    spendingAnalysis: intelligence.spendingAnalysis,
+    savingsOpportunities: intelligence.savingsOpportunities,
+    categoryOptimizations: intelligence.categoryOptimizations,
+    cashFlowForecast: intelligence.cashFlowForecast,
+    subscriptionWaste: intelligence.subscriptionWaste,
+    equitySummary: intelligence.equitySummary,
+    nextWeekRecommendation: intelligence.nextWeekRecommendation,
+    nextMonthRecommendation: intelligence.nextMonthRecommendation,
+    budgets: budgets.map((budget) => ({ category: budget.category, monthlyLimit: Number(budget.monthly_limit) })),
+    subscriptions: subscriptions.map((subscription) => ({
+      name: subscription.name, amount: Number(subscription.amount), category: subscription.category,
+      billingDate: subscription.billing_date, frequency: subscription.frequency
+    })),
+    recentTransactions: periodTransactions.slice(0, 25).map((transaction) => ({
+      type: transaction.type, amount: Number(transaction.amount), category: transaction.category, date: transaction.transaction_date
+    })),
+    subscriptionsTotal: subscriptions.reduce((sum, item) => sum + Number(item.amount), 0)
+  };
+
+  const systemPrompt = [
+    "You create concise, personal-finance insights in Bahasa Indonesia.",
+    "Use only the supplied user's financial data and IDR values.",
+    "Never invent transactions or amounts.",
+    "Return valid JSON with 3-5 short insights and optional warnings.",
+    "Do not include markdown or prose outside the JSON object."
+  ].join(" ");
+
+  if (!options.useExternalAi) return fallback;
+
+  // Prefer Anthropic Claude when configured, else fall back to OpenAI, else the computed insight.
+  if (process.env.ANTHROPIC_API_KEY) {
+    const lines = await callAnthropic(systemPrompt, financeContext);
+    if (lines) return { ...fallback, conclusion: lines.map((line) => `- ${line}`).join("\n") };
+    return fallback;
+  }
+
+  if (!process.env.AI_API_KEY) return fallback;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 6000);
@@ -165,6 +211,42 @@ export async function generateBudgetInsightFromData(
     return { ...fallback, conclusion: lines.map((line) => `- ${line}`).join("\n") };
   } catch {
     return fallback;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// Call Anthropic Claude (latest fast model) for grounded insights. Returns the
+// insight lines, or null on any error so the caller can use its fallback.
+async function callAnthropic(systemPrompt: string, financeContext: unknown): Promise<string[] | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY as string,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: process.env.ANTHROPIC_MODEL || "claude-haiku-4-5",
+        max_tokens: 400,
+        system: `${systemPrompt} Respond with ONLY a JSON object of the form {"insights": string[], "warnings"?: string[]}.`,
+        messages: [{ role: "user", content: JSON.stringify({ financeContext }) }]
+      })
+    });
+    if (!response.ok) return null;
+    const json = await response.json();
+    const text: string | undefined = json?.content?.find((part: { type: string }) => part.type === "text")?.text;
+    if (!text) return null;
+    const match = text.match(/\{[\s\S]*\}/);
+    const parsed = AIOutputSchema.safeParse(JSON.parse(match ? match[0] : text));
+    if (!parsed.success) return null;
+    return [...parsed.data.insights, ...(parsed.data.warnings ?? [])].slice(0, 5);
+  } catch {
+    return null;
   } finally {
     clearTimeout(timeout);
   }

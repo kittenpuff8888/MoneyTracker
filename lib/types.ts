@@ -115,11 +115,16 @@ export type EquityAsset = {
   created_at: string;
 };
 
+export type TradeStatus = "open" | "realized";
+
 export type RealizedTrade = {
   id: string;
   user_id: string;
   wallet_id: string | null;
   ordered_item: string;
+  status: TradeStatus;
+  entry_price: number;
+  exit_price: number | null;
   lot: number;
   price: number;
   amount_done: number;

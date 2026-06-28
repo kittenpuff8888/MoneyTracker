@@ -112,12 +112,15 @@ export function AppSidebar() {
           <span className="text-[13px] font-semibold">Settings</span>
         </Link>
         <Link
-          href="/reports"
+          href="/guide"
           className="flex items-center gap-[11px] rounded-[11px] px-[11px] py-[9px] transition-colors"
-          style={{ color: "var(--muted)" }}
+          style={{
+            color: isActive("/guide") ? "var(--text)" : "var(--muted)",
+            background: isActive("/guide") ? "var(--soft)" : "transparent"
+          }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3" /><path d="M12 17h.01" /></svg>
-          <span className="text-[13px] font-semibold">Help &amp; Guide</span>
+          <span className="text-[13px] font-semibold">Guide</span>
         </Link>
       </div>
     </nav>

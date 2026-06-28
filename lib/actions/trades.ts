@@ -37,15 +37,25 @@ export async function upsertTrade(input: unknown) {
   const parsed = realizedTradeSchema.parse(input);
   const { supabase, user } = await requireUser();
 
+  const entry = Number(parsed.entry_price) || 0;
+  const exit = parsed.status === "realized" ? Number(parsed.exit_price ?? 0) : null;
+  const fee = parsed.status === "realized" ? Number(parsed.total_fee) || 0 : 0;
+  // Realized P&L = (exit − entry) − fee. Computed server-side, never trusted from the client.
+  const realizedPnl = parsed.status === "realized" && exit != null ? exit - entry - fee : 0;
+
   const payload = {
     wallet_id: parsed.wallet_id,
-    ordered_item: parsed.ordered_item,
-    lot: parsed.lot,
-    price: parsed.price,
-    amount_done: parsed.amount_done,
-    total_fee: parsed.total_fee,
-    net_amount: parsed.net_amount,
-    realized_pnl: parsed.realized_pnl,
+    ordered_item: parsed.ordered_item.toUpperCase(),
+    status: parsed.status,
+    entry_price: entry,
+    exit_price: exit,
+    total_fee: fee,
+    realized_pnl: realizedPnl,
+    // legacy columns kept in sync for compatibility
+    price: entry,
+    lot: 0,
+    amount_done: parsed.status === "realized" ? exit ?? 0 : entry,
+    net_amount: parsed.status === "realized" ? (exit ?? 0) - fee : 0,
     trade_date: parsed.trade_date
   };
 
@@ -64,11 +74,11 @@ export async function upsertTrade(input: unknown) {
     if (error) throw new Error(error.message);
     // reverse old effect, apply new
     if (old) await adjustWalletBalance(supabase, user.id, old.wallet_id ?? null, -Number(old.realized_pnl ?? 0));
-    await adjustWalletBalance(supabase, user.id, parsed.wallet_id, parsed.realized_pnl);
+    await adjustWalletBalance(supabase, user.id, parsed.wallet_id, realizedPnl);
   } else {
     const { error } = await supabase.from("realized_trades").insert({ ...payload, user_id: user.id });
     if (error) throw new Error(error.message);
-    await adjustWalletBalance(supabase, user.id, parsed.wallet_id, parsed.realized_pnl);
+    await adjustWalletBalance(supabase, user.id, parsed.wallet_id, realizedPnl);
   }
 
   revalidatePath("/equity");

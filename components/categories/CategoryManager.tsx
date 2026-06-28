@@ -1,111 +1,114 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil, Plus, Save, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/Button";
-import { Input, Select } from "@/components/ui/Input";
-import { ConfirmDeleteButton } from "@/components/ui/ConfirmDeleteButton";
 import { upsertCategory, deleteCategory } from "@/lib/actions/categories";
+import { categoryColor } from "@/lib/category-colors";
 import type { TransactionCategoryRow } from "@/lib/types";
 
-const KINDS = ["all", "income", "outcome", "transfer"] as const;
-
 export function CategoryManager({ categories }: { categories: TransactionCategoryRow[] }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState("");
-  const [kind, setKind] = useState<(typeof KINDS)[number]>("all");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
 
   function add() {
-    if (!name.trim()) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
     startTransition(async () => {
       try {
-        await upsertCategory({ name: name.trim(), kind });
+        await upsertCategory({ name: trimmed, kind: "all" });
         setName("");
         toast.success("Category added.");
+        router.refresh();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Unable to add category.");
       }
     });
   }
 
-  function saveRename(id: string) {
-    if (!editName.trim()) return;
+  function rename(category: TransactionCategoryRow, next: string) {
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === category.name) return;
     startTransition(async () => {
       try {
-        await upsertCategory({ id, name: editName.trim(), kind: "all" });
-        setEditingId(null);
+        await upsertCategory({ id: category.id, name: trimmed, kind: category.kind });
         toast.success("Category renamed.");
+        router.refresh();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Unable to rename category.");
       }
     });
   }
 
+  function remove(category: TransactionCategoryRow) {
+    startTransition(async () => {
+      try {
+        await deleteCategory(category.id);
+        toast.success("Category deleted.");
+        router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to delete category.");
+      }
+    });
+  }
+
+  const previewColor = categoryColor(name || "new");
+
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-        <Input placeholder="New category name" value={name} onChange={(e) => setName(e.target.value)} />
-        <Select value={kind} onChange={(e) => setKind(e.target.value as (typeof KINDS)[number])}>
-          {KINDS.map((k) => (
-            <option key={k} value={k} className="capitalize">
-              {k}
-            </option>
-          ))}
-        </Select>
-        <Button type="button" onClick={add} disabled={pending || !name.trim()}>
-          <Plus size={16} />
-          Add
-        </Button>
+    <div>
+      {/* Add row */}
+      <div className="mb-4 flex gap-2">
+        <div className="flex flex-1 items-center gap-[7px] rounded-[10px] px-3 py-[9px]" style={{ background: "var(--soft)", border: "1px solid var(--border)" }}>
+          <span className="h-3 w-3 flex-[0_0_12px] rounded-[4px]" style={{ background: previewColor }} />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+            placeholder="New category name…"
+            className="w-full border-none bg-transparent text-[13px] outline-none"
+            style={{ color: "var(--text)" }}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={add}
+          disabled={pending || !name.trim()}
+          className="flex items-center gap-1.5 rounded-[10px] px-4 text-[12.5px] font-semibold transition hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--ink)", color: "var(--panel)" }}
+        >
+          + Add
+        </button>
       </div>
 
-      <div className="divide-y divide-border rounded-lg border border-border">
+      {/* List */}
+      <div className="flex flex-col gap-2">
         {categories.length === 0 ? (
-          <p className="p-3 text-sm text-muted-foreground">No categories yet. Add your first one above.</p>
+          <p className="text-[13px]" style={{ color: "var(--muted)" }}>No categories yet. Add your first one above.</p>
         ) : (
           categories.map((category) => (
-            <div key={category.id} className="flex items-center justify-between gap-3 p-3 text-sm">
-              {editingId === category.id ? (
-                <div className="flex flex-1 items-center gap-2">
-                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-9" />
-                  <Button type="button" className="h-9 px-3" onClick={() => saveRename(category.id)} disabled={pending}>
-                    <Save size={14} />
-                  </Button>
-                  <Button type="button" variant="secondary" className="h-9 px-3" onClick={() => setEditingId(null)}>
-                    <X size={14} />
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <span className="font-medium">{category.name}</span>
-                    {category.kind !== "all" ? (
-                      <span className="ml-2 rounded bg-sky-50 px-2 py-0.5 text-xs capitalize text-sky-700">{category.kind}</span>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-8 px-3"
-                      onClick={() => {
-                        setEditingId(category.id);
-                        setEditName(category.name);
-                      }}
-                    >
-                      <Pencil size={14} />
-                      Rename
-                    </Button>
-                    <ConfirmDeleteButton
-                      itemName={`${category.name} category`}
-                      successMessage="Category deleted."
-                      onConfirm={() => deleteCategory(category.id)}
-                    />
-                  </div>
-                </>
+            <div key={category.id} className="flex items-center gap-[11px] rounded-[11px] px-[13px] py-2.5" style={{ border: "1px solid var(--border)" }}>
+              <span className="h-3 w-3 flex-[0_0_12px] rounded-[4px]" style={{ background: categoryColor(category.name) }} />
+              <input
+                defaultValue={category.name}
+                onBlur={(e) => rename(category, e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                className="flex-1 border-none bg-transparent text-[13px] font-semibold outline-none"
+                style={{ color: "var(--text)" }}
+              />
+              {category.kind !== "all" && (
+                <span className="num rounded-[6px] px-2 py-0.5 text-[10px] font-semibold capitalize" style={{ background: "var(--soft)", color: "var(--muted)" }}>{category.kind}</span>
               )}
+              <button
+                type="button"
+                onClick={() => remove(category)}
+                aria-label={`Delete ${category.name}`}
+                className="flex h-7 w-7 items-center justify-center rounded-lg"
+                style={{ border: "1px solid var(--border)", color: "var(--down)" }}
+              >
+                <Trash2 size={14} />
+              </button>
             </div>
           ))
         )}

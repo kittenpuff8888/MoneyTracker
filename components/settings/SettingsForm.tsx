@@ -130,11 +130,6 @@ export function SettingsForm({ profile }: { profile: Profile }) {
         </p>
       </div>
 
-      <label className="grid gap-1.5 text-sm font-medium">
-        Currency
-        <Input value="IDR / Indonesian Rupiah" readOnly className="bg-muted text-muted-foreground" />
-      </label>
-
       <div>
         <Button disabled={pending}>{pending ? "Saving…" : "Save Settings"}</Button>
       </div>
