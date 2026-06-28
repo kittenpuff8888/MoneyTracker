@@ -1,4 +1,4 @@
-import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
+import { endOfMonth, format, parseISO, startOfMonth, subMonths } from "date-fns";
 import { ArrowDownLeft, ArrowUpRight, Banknote, Flame, PiggyBank, Wallet } from "lucide-react";
 import { redirect } from "next/navigation";
 import { BudgetWarningCard } from "@/components/cards/BudgetWarningCard";
@@ -9,6 +9,7 @@ import { FinancialHealthGauge } from "@/components/charts/FinancialHealthGauge";
 import { IncomeOutcomeChart } from "@/components/charts/IncomeOutcomeChart";
 import { SpendingBreakdownChart } from "@/components/charts/SpendingBreakdownChart";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { DateRangeControl } from "@/components/dashboard/DateRangeControl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
@@ -19,26 +20,42 @@ import {
   calculateSavingsRatio,
   calculateSpendingByCategory,
   detectOverspending,
-  getUpcomingSubscriptions
+  getUpcomingSubscriptions,
+  sumTransactionsInRange
 } from "@/lib/calculations";
 import { formatIDR, formatPercent } from "@/lib/formatters";
 import { generateBudgetInsightFromData } from "@/lib/ai";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function DashboardPage() {
+function isValidDate(value: string | undefined): value is string {
+  return Boolean(value) && /^\d{4}-\d{2}-\d{2}$/.test(value as string);
+}
+
+export default async function DashboardPage({
+  searchParams
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-  const sixMonthsAgo = format(startOfMonth(subMonths(new Date(), 5)), "yyyy-MM-dd");
+  const sp = await searchParams;
+  const now = new Date();
+  const defaultFrom = format(startOfMonth(now), "yyyy-MM-dd");
+  const defaultTo = format(endOfMonth(now), "yyyy-MM-dd");
+  const from = isValidDate(sp.from) ? sp.from : defaultFrom;
+  const to = isValidDate(sp.to) ? sp.to : defaultTo;
+  const fromDate = parseISO(from);
+  const toDate = parseISO(to);
+
+  const sixMonthsAgo = format(startOfMonth(subMonths(now, 5)), "yyyy-MM-dd");
   const [profileResult, accountsResult, transactionsResult, budgetsResult, subscriptionsResult, goalsResult, equityResult, monthlyResult] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("accounts").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-    supabase.from("transactions").select("*").eq("user_id", user.id).gte("transaction_date", ninetyDaysAgo.toISOString().slice(0, 10)).order("transaction_date", { ascending: false }),
+    supabase.from("transactions").select("*").eq("user_id", user.id).order("transaction_date", { ascending: false }),
     supabase.from("budgets").select("*").eq("user_id", user.id),
     supabase.from("subscriptions").select("*").eq("user_id", user.id).order("billing_date", { ascending: true }),
     supabase.from("goals").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
@@ -53,16 +70,17 @@ export default async function DashboardPage() {
   const subscriptions = subscriptionsResult.data ?? [];
   const goals = goalsResult.data ?? [];
   const equityAssets = equityResult.data ?? [];
-
   const monthlyRows = monthlyResult.data ?? [];
-  const currentMonth = format(startOfMonth(new Date()), "yyyy-MM-dd");
-  const previousMonth = format(startOfMonth(subMonths(new Date(), 1)), "yyyy-MM-dd");
-  const currentSummary = monthlyRows.find((row) => row.month === currentMonth);
-  const previousSummary = monthlyRows.find((row) => row.month === previousMonth);
-  const income = Number(currentSummary?.total_income ?? 0);
-  const outcome = Number(currentSummary?.total_outcome ?? 0);
-  const previousIncome = Number(previousSummary?.total_income ?? 0);
-  const previousOutcome = Number(previousSummary?.total_outcome ?? 0);
+
+  const income = sumTransactionsInRange(transactions, "income", fromDate, toDate);
+  const outcome = sumTransactionsInRange(transactions, "outcome", fromDate, toDate);
+
+  const lengthMs = toDate.getTime() - fromDate.getTime();
+  const prevTo = new Date(fromDate.getTime() - 24 * 60 * 60 * 1000);
+  const prevFrom = new Date(prevTo.getTime() - lengthMs);
+  const previousIncome = sumTransactionsInRange(transactions, "income", prevFrom, prevTo);
+  const previousOutcome = sumTransactionsInRange(transactions, "outcome", prevFrom, prevTo);
+
   const netBalance = calculateNetBalance(accounts);
   const savingsRatio = calculateSavingsRatio(income, outcome);
   const previousSavingsRatio = calculateSavingsRatio(previousIncome, previousOutcome);
@@ -71,9 +89,10 @@ export default async function DashboardPage() {
   const budgetUsage = calculateBudgetUsage(budgets, transactions);
   const warnings = budgetUsage.filter((item) => item.percentUsed >= 75);
   const overspending = detectOverspending(transactions);
-  const spending = calculateSpendingByCategory(transactions, startOfMonth(new Date()), endOfMonth(new Date()));
+  const spending = calculateSpendingByCategory(transactions, fromDate, toDate);
+
   const trend = Array.from({ length: 6 }, (_, index) => {
-    const month = startOfMonth(subMonths(new Date(), 5 - index));
+    const month = startOfMonth(subMonths(now, 5 - index));
     const key = format(month, "yyyy-MM-dd");
     const summary = monthlyRows.find((row) => row.month === key);
     return {
@@ -95,8 +114,12 @@ export default async function DashboardPage() {
         <h1 className="mt-1 text-3xl font-bold">Dashboard</h1>
       </div>
 
+      <div className="mb-5">
+        <DateRangeControl from={from} to={to} />
+      </div>
+
       {accounts.length === 0 && transactions.length === 0 ? (
-        <EmptyState title="Welcome to 8888 Tracker." description="Add your first account and transaction to generate your dashboard." />
+        <EmptyState title="Welcome to 8888 Tracker." description="Add your first wallet and transaction to generate your dashboard." />
       ) : (
         <div className="grid gap-5 xl:grid-cols-12">
           <div className="grid gap-5 xl:col-span-9">
@@ -107,7 +130,7 @@ export default async function DashboardPage() {
                 icon={<Wallet size={18} />}
                 badge={netBalance >= 0 ? "POSITIVE" : "NEGATIVE"}
                 badgeTone={netBalance >= 0 ? "green" : "orange"}
-                helper={netBalance >= 0 ? "Combined balance across your accounts." : "Your combined account balance is below zero."}
+                helper={netBalance >= 0 ? "Combined balance across your wallets." : "Your combined wallet balance is below zero."}
               >
                 <div>
                   <div className="flex justify-between text-xs text-muted-foreground"><span>Burn Rate</span><span>{formatPercent(burnRate)}</span></div>
@@ -117,7 +140,7 @@ export default async function DashboardPage() {
               <StatCard title="Income" value={formatIDR(income)} icon={<ArrowDownLeft size={18} />} badge={incomeChange.label} badgeTone={incomeChange.tone} />
               <StatCard title="Outcome" value={formatIDR(outcome)} icon={<ArrowUpRight size={18} />} badge={outcomeChange.label} badgeTone={outcomeChange.value <= 0 ? "green" : "orange"} />
               <StatCard title="Savings Ratio" value={formatPercent(savingsRatio)} icon={<PiggyBank size={18} />} badge={savingsChange.label} badgeTone={savingsChange.tone} />
-              <StatCard title="Remaining Balance" value={formatIDR(remaining)} icon={<Banknote size={18} />} helper="Income minus outcome this month" />
+              <StatCard title="Remaining Balance" value={formatIDR(remaining)} icon={<Banknote size={18} />} helper="Income minus outcome in range" />
               <StatCard title="Burn Rate" value={formatPercent(burnRate)} icon={<Flame size={18} />} helper="Outcome divided by income" />
             </div>
 
@@ -195,14 +218,14 @@ function percentChange(current: number, previous: number): {
   if (previous <= 0) {
     return {
       value: current > 0 ? 100 : 0,
-      label: current > 0 ? "New this month" : "No prior-month data",
+      label: current > 0 ? "New this period" : "No prior-period data",
       tone: current > 0 ? "green" : "orange"
     };
   }
   const value = ((current - previous) / previous) * 100;
   return {
     value,
-    label: `${value >= 0 ? "+" : ""}${Math.round(value)}% vs last month`,
+    label: `${value >= 0 ? "+" : ""}${Math.round(value)}% vs prev period`,
     tone: value >= 0 ? "green" : "orange"
   };
 }
@@ -212,11 +235,11 @@ function pointChange(current: number, previous: number): {
   tone: "green" | "orange";
 } {
   if (previous === 0 && current === 0) {
-    return { label: "No prior-month data", tone: "orange" };
+    return { label: "No prior-period data", tone: "orange" };
   }
   const value = current - previous;
   return {
-    label: `${value >= 0 ? "+" : ""}${Math.round(value)} pts vs last month`,
+    label: `${value >= 0 ? "+" : ""}${Math.round(value)} pts vs prev period`,
     tone: value >= 0 ? "green" : "orange"
   };
 }

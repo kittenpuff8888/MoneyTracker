@@ -112,6 +112,21 @@ export type EquityAsset = {
   created_at: string;
 };
 
+export type RealizedTrade = {
+  id: string;
+  user_id: string;
+  wallet_id: string | null;
+  ordered_item: string;
+  lot: number;
+  price: number;
+  amount_done: number;
+  total_fee: number;
+  net_amount: number;
+  realized_pnl: number;
+  trade_date: string;
+  created_at: string;
+};
+
 export type Goal = {
   id: string;
   user_id: string;
@@ -234,6 +249,12 @@ export type Database = {
         Row: TransactionCategoryRow;
         Insert: Partial<Omit<TransactionCategoryRow, "id" | "created_at">> & { user_id: string; name: string };
         Update: Partial<Omit<TransactionCategoryRow, "id" | "user_id" | "created_at">>;
+        Relationships: [];
+      };
+      realized_trades: {
+        Row: RealizedTrade;
+        Insert: Partial<Omit<RealizedTrade, "id" | "created_at">> & { user_id: string; ordered_item: string };
+        Update: Partial<Omit<RealizedTrade, "id" | "user_id" | "created_at">>;
         Relationships: [];
       };
     };

@@ -78,6 +78,18 @@ export function calculateRemainingBalance(income: number, outcome: number) {
   return income - outcome;
 }
 
+export function sumTransactionsInRange(
+  transactions: Transaction[],
+  type: "income" | "outcome",
+  start: Date,
+  end: Date
+) {
+  return transactions
+    .filter((transaction) => transaction.type === type)
+    .filter((transaction) => isWithinInterval(parseISO(transaction.transaction_date), { start, end }))
+    .reduce((sum, transaction) => sum + toNumber(transaction.amount), 0);
+}
+
 export function calculateSpendingByCategory(transactions: Transaction[], start?: Date, end?: Date): CategoryTotal[] {
   const totals = new Map<string, number>();
   transactions

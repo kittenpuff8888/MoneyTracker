@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { SettingsForm } from "@/components/settings/SettingsForm";
+import { CategoryManager } from "@/components/categories/CategoryManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { createClient } from "@/lib/supabase/server";
 
@@ -10,7 +11,7 @@ export default async function SettingsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/");
-  const [profileResult, auditResult, emailLogResult] = await Promise.all([
+  const [profileResult, auditResult, emailLogResult, categoriesResult] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase
       .from("financial_audit_logs")
@@ -23,7 +24,12 @@ export default async function SettingsPage() {
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(5)
+      .limit(5),
+    supabase
+      .from("transaction_categories")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true })
   ]);
   const profile = profileResult.data;
   if (!profile) redirect("/auth/callback");
@@ -41,6 +47,7 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
         <Card><CardHeader><CardTitle>Preferences</CardTitle></CardHeader><CardContent><SettingsForm profile={profile} /></CardContent></Card>
+        <Card className="lg:col-span-2"><CardHeader><CardTitle>Categories</CardTitle></CardHeader><CardContent><CategoryManager categories={categoriesResult.data ?? []} /></CardContent></Card>
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle>Recent Account Activity</CardTitle></CardHeader>
           <CardContent className="grid gap-6 lg:grid-cols-2">

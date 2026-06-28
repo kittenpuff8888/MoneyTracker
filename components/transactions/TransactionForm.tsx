@@ -17,12 +17,16 @@ type TransactionFormValues = z.infer<typeof transactionSchema>;
 export function TransactionForm({
   accounts,
   transaction,
+  categories,
   onSaved
 }: {
   accounts: Account[];
   transaction?: Transaction | null;
+  categories?: string[];
   onSaved?: () => void;
 }) {
+  const categoryOptions = categories && categories.length ? categories : [...transactionCategories];
+  const defaultCategory = transaction?.category ?? categoryOptions[0] ?? "Other";
   const [pending, startTransition] = useTransition();
   const {
     register,
@@ -37,7 +41,7 @@ export function TransactionForm({
       type: transaction?.type ?? "outcome",
       amount: transaction?.amount ?? 0,
       fee: transaction?.fee ?? 0,
-      category: (transaction?.category as TransactionFormValues["category"]) ?? "Lunch",
+      category: (transaction?.category as TransactionFormValues["category"]) ?? defaultCategory,
       from_account_id: transaction?.from_account_id ?? "",
       to_account_id: transaction?.to_account_id ?? "",
       transaction_date: transaction?.transaction_date ?? new Date().toISOString().slice(0, 10),
@@ -51,7 +55,7 @@ export function TransactionForm({
       type: transaction?.type ?? "outcome",
       amount: transaction?.amount ?? 0,
       fee: transaction?.fee ?? 0,
-      category: (transaction?.category as TransactionFormValues["category"]) ?? "Lunch",
+      category: (transaction?.category as TransactionFormValues["category"]) ?? defaultCategory,
       from_account_id: transaction?.from_account_id ?? "",
       to_account_id: transaction?.to_account_id ?? "",
       transaction_date: transaction?.transaction_date ?? new Date().toISOString().slice(0, 10),
@@ -69,7 +73,7 @@ export function TransactionForm({
           type: "outcome",
           amount: 0,
           fee: 0,
-          category: "Lunch",
+          category: categoryOptions[0] ?? "Other",
           from_account_id: "",
           to_account_id: "",
           transaction_date: new Date().toISOString().slice(0, 10),
@@ -102,7 +106,7 @@ export function TransactionForm({
         <label className="grid gap-1 text-sm font-medium">
           Category
           <Select {...register("category")}>
-            {transactionCategories.map((category) => (
+            {categoryOptions.map((category) => (
               <option key={category} value={category}>
                 {category}
               </option>

@@ -7,7 +7,7 @@ import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransactionTable } from "@/components/transactions/TransactionTable";
 import type { Account, Transaction } from "@/lib/types";
 
-export function TransactionsManager({ accounts, transactions }: { accounts: Account[]; transactions: Transaction[] }) {
+export function TransactionsManager({ accounts, transactions, categories }: { accounts: Account[]; transactions: Transaction[]; categories?: string[] }) {
   const [editing, setEditing] = useState<Transaction | null>(null);
 
   return (
@@ -17,7 +17,7 @@ export function TransactionsManager({ accounts, transactions }: { accounts: Acco
           <CardTitle>{editing ? "Edit Transaction" : "Add Income, Outcome, or Transfer"}</CardTitle>
         </CardHeader>
         <CardContent>
-          <TransactionForm accounts={accounts} transaction={editing} onSaved={() => setEditing(null)} />
+          <TransactionForm accounts={accounts} transaction={editing} categories={categories} onSaved={() => setEditing(null)} />
         </CardContent>
       </Card>
 

@@ -7,7 +7,7 @@ export default async function TransactionsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/");
-  const [profileResult, accountsResult, transactionsResult] = await Promise.all([
+  const [profileResult, accountsResult, transactionsResult, categoriesResult] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("accounts").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
     supabase
@@ -16,13 +16,15 @@ export default async function TransactionsPage() {
       .eq("user_id", user.id)
       .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(100)
+      .limit(100),
+    supabase.from("transaction_categories").select("name").eq("user_id", user.id).order("name", { ascending: true })
   ]);
+  const categories = (categoriesResult.data ?? []).map((row) => row.name);
 
   return (
     <DashboardShell profile={profileResult.data}>
       <div className="mb-6"><h1 className="text-3xl font-bold">Transactions</h1><p className="mt-1 text-sm text-muted-foreground">Add, edit, delete, and view income, outcome, and Transfer / Move Money records.</p></div>
-      <TransactionsManager accounts={accountsResult.data ?? []} transactions={transactionsResult.data ?? []} />
+      <TransactionsManager accounts={accountsResult.data ?? []} transactions={transactionsResult.data ?? []} categories={categories} />
     </DashboardShell>
   );
 }
