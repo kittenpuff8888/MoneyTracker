@@ -1,5 +1,6 @@
 import { endOfMonth, format, parseISO, startOfMonth, subMonths } from "date-fns";
-import { ArrowDownLeft, ArrowUpRight, Banknote, Flame, PiggyBank, Wallet } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Banknote, Flame, Minus, PiggyBank, Plus, Wallet } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BudgetWarningCard } from "@/components/cards/BudgetWarningCard";
 import { InsightCard } from "@/components/cards/InsightCard";
@@ -50,6 +51,13 @@ export default async function DashboardPage({
   const to = isValidDate(sp.to) ? sp.to : defaultTo;
   const fromDate = parseISO(from);
   const toDate = parseISO(to);
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const rangeLabel =
+    format(fromDate, "yyyy") === format(toDate, "yyyy")
+      ? `${format(fromDate, "d")}\u2013${format(toDate, "d MMM yyyy")}`
+      : `${format(fromDate, "d MMM yyyy")} \u2013 ${format(toDate, "d MMM yyyy")}`;
+  const firstName = (profile?.full_name ?? user.email ?? "there").split(" ")[0];
 
   const sixMonthsAgoDate = startOfMonth(subMonths(now, 5));
   const sixMonthsAgo = format(sixMonthsAgoDate, "yyyy-MM-dd");
@@ -118,9 +126,21 @@ export default async function DashboardPage({
 
   return (
     <DashboardShell profile={profile}>
-      <div className="mb-6">
-        <p className="text-sm text-muted-foreground">Welcome back, {profile?.full_name ?? user.email}</p>
-        <h1 className="mt-1 text-3xl font-bold">Dashboard</h1>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{greeting}, {firstName}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Report for <span className="font-medium text-foreground">{rangeLabel}</span> · all figures update with your selected range.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/transactions" className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#0b0e14] px-4 text-sm font-semibold text-white transition hover:bg-[#1c2230]">
+            <Minus size={15} /> Add Expense
+          </Link>
+          <Link href="/transactions" className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-white px-4 text-sm font-semibold text-foreground transition hover:bg-slate-50">
+            <Plus size={15} /> Add Income
+          </Link>
+        </div>
       </div>
 
       <div className="mb-5">
