@@ -13,17 +13,18 @@ export type SubscriptionFrequency = "weekly" | "monthly" | "yearly" | "custom";
 export type EquityAssetType = "Stock" | "ETF" | "Mutual Fund" | "Crypto" | "Bond" | "Cash" | "Other";
 
 export const transactionCategories = [
-  "Skincare",
-  "Snacks",
-  "E-money Top Up",
-  "Gojek",
-  "Lunch",
-  "Hangout with Friends",
-  "Treat Parents",
-  "Gift",
-  "Subscription",
-  "Clothes",
-  "Other"
+  "Food & Dining",
+  "Housing",
+  "Transportation",
+  "Health & Wellness",
+  "Personal & Shopping",
+  "Entertainment & Leisure",
+  "Subscriptions & Digital Services",
+  "Financial",
+  "Education & Career",
+  "Family & Pets",
+  "Gifts & Donations",
+  "Miscellaneous"
 ] as const;
 
 export type TransactionCategory = (typeof transactionCategories)[number];
@@ -49,6 +50,7 @@ export type TransactionCategoryRow = {
   user_id: string;
   name: string;
   kind: "income" | "outcome" | "transfer" | "all";
+  sort_order: number;
   created_at: string;
 };
 
@@ -305,6 +307,22 @@ export type Database = {
       };
       sync_profile_from_auth: {
         Args: Record<never, never>;
+        Returns: void;
+      };
+      add_category: {
+        Args: { p_name: string; p_kind?: string };
+        Returns: string;
+      };
+      rename_category: {
+        Args: { p_id: string; p_name: string };
+        Returns: void;
+      };
+      delete_category: {
+        Args: { p_id: string };
+        Returns: void;
+      };
+      seed_default_categories: {
+        Args: { p_user: string };
         Returns: void;
       };
     };

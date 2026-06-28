@@ -16,7 +16,7 @@ export default async function SettingsPage() {
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("financial_audit_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(10),
     supabase.from("email_report_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5),
-    supabase.from("transaction_categories").select("*").eq("user_id", user.id).order("name", { ascending: true })
+    supabase.from("transaction_categories").select("*").eq("user_id", user.id).order("sort_order", { ascending: true }).order("name", { ascending: true })
   ]);
 
   const profile = profileResult.data;

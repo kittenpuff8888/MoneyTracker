@@ -17,7 +17,7 @@ export default async function TransactionsPage() {
       .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(100),
-    supabase.from("transaction_categories").select("name").eq("user_id", user.id).order("name", { ascending: true })
+    supabase.from("transaction_categories").select("name").eq("user_id", user.id).order("sort_order", { ascending: true }).order("name", { ascending: true })
   ]);
   const categories = (categoriesResult.data ?? []).map((row) => row.name);
 

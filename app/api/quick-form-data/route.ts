@@ -8,7 +8,7 @@ export async function GET() {
 
   const [accountsResult, categoriesResult] = await Promise.all([
     supabase.from("accounts").select("id,name,type").eq("user_id", user.id).order("name"),
-    supabase.from("transaction_categories").select("name").eq("user_id", user.id).order("name")
+    supabase.from("transaction_categories").select("name").eq("user_id", user.id).order("sort_order").order("name")
   ]);
 
   return NextResponse.json({

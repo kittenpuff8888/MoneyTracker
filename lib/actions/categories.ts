@@ -21,39 +21,28 @@ function revalidateAll() {
   revalidatePath("/dashboard");
 }
 
+// Writes go through SECURITY DEFINER RPCs (add_category / rename_category /
+// delete_category) — the same reliable pattern as apply_transaction — so they
+// are not affected by PostgREST/RLS edge cases on direct table writes.
 export async function upsertCategory(input: unknown) {
   const parsed = categorySchema.parse(input);
   const name = parsed.name.trim();
   if (!name) throw new Error("Category name is required.");
-  const { supabase, user } = await requireUser();
+  const { supabase } = await requireUser();
 
   if (parsed.id) {
-    const { error } = await supabase
-      .from("transaction_categories")
-      .update({ name, kind: parsed.kind })
-      .eq("id", parsed.id)
-      .eq("user_id", user.id);
-    if (error) {
-      throw new Error(
-        error.message.toLowerCase().includes("duplicate") || error.code === "23505"
-          ? "Another category already uses that name."
-          : error.message
-      );
-    }
+    const { error } = await supabase.rpc("rename_category", { p_id: parsed.id, p_name: name });
+    if (error) throw new Error(error.message);
   } else {
-    // Upsert so re-adding an existing name updates it instead of failing on the
-    // UNIQUE(user_id, name) constraint — the one real failure path here.
-    const { error } = await supabase
-      .from("transaction_categories")
-      .upsert({ user_id: user.id, name, kind: parsed.kind }, { onConflict: "user_id,name" });
+    const { error } = await supabase.rpc("add_category", { p_name: name, p_kind: parsed.kind });
     if (error) throw new Error(error.message);
   }
   revalidateAll();
 }
 
 export async function deleteCategory(id: string) {
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase.from("transaction_categories").delete().eq("id", id).eq("user_id", user.id);
+  const { supabase } = await requireUser();
+  const { error } = await supabase.rpc("delete_category", { p_id: id });
   if (error) throw new Error(error.message);
   revalidateAll();
 }

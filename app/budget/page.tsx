@@ -12,7 +12,7 @@ export default async function BudgetPage() {
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("budgets").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
     supabase.from("transactions").select("*").eq("user_id", user.id).gte("transaction_date", currentYearStart).order("transaction_date", { ascending: false }),
-    supabase.from("transaction_categories").select("name").eq("user_id", user.id).order("name", { ascending: true })
+    supabase.from("transaction_categories").select("name").eq("user_id", user.id).order("sort_order", { ascending: true }).order("name", { ascending: true })
   ]);
   const categories = (categoriesResult.data ?? []).map((row) => row.name);
 
