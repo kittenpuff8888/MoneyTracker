@@ -57,7 +57,6 @@ export default async function DashboardPage({
     format(fromDate, "yyyy") === format(toDate, "yyyy")
       ? `${format(fromDate, "d")}\u2013${format(toDate, "d MMM yyyy")}`
       : `${format(fromDate, "d MMM yyyy")} \u2013 ${format(toDate, "d MMM yyyy")}`;
-  const firstName = (profile?.full_name ?? user.email ?? "there").split(" ")[0];
 
   const sixMonthsAgoDate = startOfMonth(subMonths(now, 5));
   const sixMonthsAgo = format(sixMonthsAgoDate, "yyyy-MM-dd");
@@ -81,6 +80,7 @@ export default async function DashboardPage({
   ]);
 
   const profile = profileResult.data;
+  const firstName = (profile?.full_name ?? user.email ?? "there").split(" ")[0];
   const accounts = accountsResult.data ?? [];
   const transactions = transactionsResult.data ?? [];
   const budgets = budgetsResult.data ?? [];
