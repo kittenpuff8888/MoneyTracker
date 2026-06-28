@@ -144,7 +144,7 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      <div className="mb-5">
+      <div className="mb-5 rounded-xl border border-border bg-white px-4 py-2.5">
         <DateRangeControl from={from} to={to} />
       </div>
 

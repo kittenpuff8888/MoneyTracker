@@ -3,8 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Calendar } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 
 function fmt(d: Date) {
@@ -34,15 +32,13 @@ export function DateRangeControl({ from, to }: { from: string; to: string }) {
     router.push(`/dashboard?from=${f}&to=${t}`);
   }
 
-  const options = presets();
-
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
-          <Calendar size={15} /> Range
-        </span>
-        {options.map((option) => {
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <Calendar size={14} /> Range
+      </span>
+      <div className="flex items-center gap-1">
+        {presets().map((option) => {
           const active = option.from === from && option.to === to;
           return (
             <button
@@ -50,8 +46,8 @@ export function DateRangeControl({ from, to }: { from: string; to: string }) {
               type="button"
               onClick={() => apply(option.from, option.to)}
               className={cn(
-                "rounded-md border px-3 py-1.5 text-xs font-medium transition",
-                active ? "border-sky-500 bg-sky-50 text-sky-700" : "border-border text-muted-foreground hover:border-sky-300"
+                "rounded-full px-3 py-1 text-xs font-medium transition",
+                active ? "bg-[#0b0e14] text-white" : "text-muted-foreground hover:bg-slate-100"
               )}
             >
               {option.label}
@@ -59,11 +55,27 @@ export function DateRangeControl({ from, to }: { from: string; to: string }) {
           );
         })}
       </div>
-      <div className="flex items-center gap-2">
-        <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="h-9 w-auto" />
+      <div className="ml-auto flex items-center gap-1.5 text-xs">
+        <input
+          type="date"
+          value={customFrom}
+          onChange={(e) => setCustomFrom(e.target.value)}
+          className="num h-8 rounded-lg border border-border bg-white px-2 outline-none focus:border-blue-400"
+        />
         <span className="text-muted-foreground">→</span>
-        <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="h-9 w-auto" />
-        <Button type="button" className="h-9 px-3" onClick={() => apply(customFrom, customTo)}>Apply</Button>
+        <input
+          type="date"
+          value={customTo}
+          onChange={(e) => setCustomTo(e.target.value)}
+          className="num h-8 rounded-lg border border-border bg-white px-2 outline-none focus:border-blue-400"
+        />
+        <button
+          type="button"
+          onClick={() => apply(customFrom, customTo)}
+          className="h-8 rounded-lg bg-[#0b0e14] px-3 font-semibold text-white transition hover:bg-[#1c2230]"
+        >
+          Apply
+        </button>
       </div>
     </div>
   );
