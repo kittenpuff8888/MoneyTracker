@@ -4,13 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 
 export function InsightCard({ insight, period = "monthly" }: { insight: string; period?: "weekly" | "monthly" }) {
   return (
-    <Card className="bg-sky-50">
-      <CardHeader className="flex flex-row items-center gap-2">
-        <Sparkles size={18} className="text-sky-600" />
-        <CardTitle>AI Budget Conclusion</CardTitle>
+    <Card>
+      <CardHeader className="flex-row items-center gap-2 border-b-0 pb-2">
+        <Sparkles size={16} className="text-primary" />
+        <CardTitle>AI Insights</CardTitle>
       </CardHeader>
-      <CardContent>
-        <AsyncInsightText initialInsight={insight} period={period} className="text-sm leading-6 text-slate-700" />
+      <CardContent className="pt-0">
+        <AsyncInsightText
+          initialInsight={insight}
+          period={period}
+          className="text-sm leading-6 text-muted-foreground"
+        />
       </CardContent>
     </Card>
   );

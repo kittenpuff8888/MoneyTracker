@@ -13,7 +13,7 @@ import {
   WalletCards
 } from "lucide-react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
-import { AddTransactionModal } from "@/components/transactions/AddTransactionModal";
+import { useAddTransaction } from "@/components/transactions/AddTransactionModal";
 import { cn } from "@/lib/utils";
 
 const overview = [
@@ -39,16 +39,27 @@ function NavItem({ item }: { item: { href: string; label: string; icon: typeof L
       className={cn(
         "flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors",
         active
-          ? "bg-[hsl(var(--foreground))] text-[hsl(var(--card))]"
+          ? "bg-foreground text-card"
           : "text-muted-foreground hover:bg-muted hover:text-foreground"
       )}
     >
-      <Icon
-        size={17}
-        className={cn(active ? "opacity-90" : "")}
-      />
+      <Icon size={17} />
       {item.label}
     </Link>
+  );
+}
+
+function AddTransactionButton() {
+  const { open } = useAddTransaction();
+  return (
+    <button
+      type="button"
+      onClick={open}
+      className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 text-sm font-semibold text-card transition hover:opacity-90"
+    >
+      <Plus size={15} />
+      Add Transaction
+    </button>
   );
 }
 
@@ -69,28 +80,16 @@ export function AppSidebar() {
       {/* Overview nav */}
       <p className="eyebrow mb-2 px-2">Overview</p>
       <nav className="space-y-0.5">
-        {overview.map((item) => (
-          <NavItem key={item.href} item={item} />
-        ))}
+        {overview.map((item) => <NavItem key={item.href} item={item} />)}
       </nav>
 
-      {/* Add Transaction — slide-in modal trigger */}
-      <AddTransactionModal>
-        <button
-          type="button"
-          className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 text-sm font-semibold text-card transition hover:opacity-90"
-        >
-          <Plus size={15} />
-          Add Transaction
-        </button>
-      </AddTransactionModal>
+      {/* Add Transaction trigger — uses context from AddTransactionProvider */}
+      <AddTransactionButton />
 
       {/* Account nav */}
       <p className="eyebrow mb-2 mt-7 px-2">Account</p>
       <nav className="space-y-0.5">
-        {accountNav.map((item) => (
-          <NavItem key={item.href} item={item} />
-        ))}
+        {accountNav.map((item) => <NavItem key={item.href} item={item} />)}
       </nav>
 
       <div className="mt-auto pt-6">

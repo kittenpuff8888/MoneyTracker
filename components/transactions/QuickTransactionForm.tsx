@@ -1,19 +1,32 @@
 "use client";
 
-import { useEffect, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { upsertTransaction } from "@/lib/actions/transactions";
 import { typedZodResolver } from "@/lib/form-resolver";
 import { transactionSchema } from "@/lib/validations";
 import type { Account } from "@/lib/types";
-import type { z } from "zod";
 import { cn } from "@/lib/utils";
+import type { z } from "zod";
 
 type Values = z.infer<typeof transactionSchema>;
 
-/* This form fetches accounts/categories client-side from a lightweight API route. */
-import { useState } from "react";
+const today = new Date().toISOString().slice(0, 10);
+
+function emptyValues(cat: string): Values {
+  return {
+    type: "outcome",
+    name: "",
+    amount: 0,
+    fee: 0,
+    category: cat,
+    from_account_id: null,
+    to_account_id: null,
+    transaction_date: today,
+    notes: ""
+  };
+}
 
 export function QuickTransactionForm({ onSaved }: { onSaved?: () => void }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -30,28 +43,17 @@ export function QuickTransactionForm({ onSaved }: { onSaved?: () => void }) {
       .catch(() => {});
   }, []);
 
-  const defaultCat = categories[0] ?? "Other";
-
-  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<Values>({
+  const { register, handleSubmit, control, reset, setValue, formState: { errors } } = useForm<Values>({
     resolver: typedZodResolver<Values>(transactionSchema),
-    defaultValues: {
-      type: "outcome",
-      name: "",
-      amount: 0,
-      fee: 0,
-      category: defaultCat,
-      from_account_id: "",
-      to_account_id: "",
-      transaction_date: new Date().toISOString().slice(0, 10),
-      notes: ""
-    }
+    defaultValues: emptyValues("Other")
   });
 
+  // When categories load, update the category field (don't reset whole form)
   useEffect(() => {
-    if (categories.length) {
-      reset((prev) => ({ ...prev, category: categories[0] }));
+    if (categories.length > 0) {
+      setValue("category", categories[0]);
     }
-  }, [categories, reset]);
+  }, [categories, setValue]);
 
   const type = useWatch({ control, name: "type" });
 
@@ -64,17 +66,7 @@ export function QuickTransactionForm({ onSaved }: { onSaved?: () => void }) {
     startTransition(async () => {
       try {
         await upsertTransaction(values);
-        reset({
-          type: "outcome",
-          name: "",
-          amount: 0,
-          fee: 0,
-          category: categories[0] ?? "Other",
-          from_account_id: "",
-          to_account_id: "",
-          transaction_date: new Date().toISOString().slice(0, 10),
-          notes: ""
-        });
+        reset(emptyValues(categories[0] ?? "Other"));
         toast.success("Transaction added.");
         onSaved?.();
       } catch (err) {
@@ -94,9 +86,7 @@ export function QuickTransactionForm({ onSaved }: { onSaved?: () => void }) {
               key={t}
               className={cn(
                 "flex cursor-pointer items-center justify-center rounded-lg py-2 text-xs font-semibold transition",
-                type === t
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                type === t ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <input type="radio" {...register("type")} value={t} className="sr-only" />
@@ -112,7 +102,7 @@ export function QuickTransactionForm({ onSaved }: { onSaved?: () => void }) {
         <input
           {...register("name")}
           placeholder="e.g. Grab, Indomaret…"
-          className="h-10 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/30"
+          className="h-10 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
         />
       </label>
 
@@ -125,7 +115,7 @@ export function QuickTransactionForm({ onSaved }: { onSaved?: () => void }) {
           step="any"
           inputMode="decimal"
           {...register("amount")}
-          className="num h-10 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/30"
+          className="num h-10 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
         />
         {errors.amount && <span className="text-xs text-danger">{errors.amount.message}</span>}
       </label>
@@ -144,7 +134,7 @@ export function QuickTransactionForm({ onSaved }: { onSaved?: () => void }) {
       )}
 
       {/* From / To wallets */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className={cn("grid gap-3", type === "transfer" ? "grid-cols-2" : "grid-cols-1")}>
         {type !== "income" && (
           <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             From Wallet
@@ -182,7 +172,7 @@ export function QuickTransactionForm({ onSaved }: { onSaved?: () => void }) {
           step="any"
           inputMode="decimal"
           {...register("fee")}
-          className="num h-10 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none focus:border-primary"
+          className="num h-10 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
         />
       </label>
 
@@ -198,10 +188,10 @@ export function QuickTransactionForm({ onSaved }: { onSaved?: () => void }) {
 
       {/* Notes */}
       <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Notes
+        Notes (optional)
         <textarea
           {...register("notes")}
-          placeholder="Optional"
+          placeholder="Add a note…"
           rows={2}
           className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
         />
@@ -212,7 +202,11 @@ export function QuickTransactionForm({ onSaved }: { onSaved?: () => void }) {
         disabled={pending || accounts.length === 0}
         className="mt-1 h-11 w-full rounded-xl bg-foreground text-sm font-semibold text-card transition hover:opacity-90 disabled:opacity-50"
       >
-        {pending ? "Saving…" : "Add Transaction"}
+        {accounts.length === 0
+          ? "Add a wallet first"
+          : pending
+          ? "Saving…"
+          : "Add Transaction"}
       </button>
     </form>
   );

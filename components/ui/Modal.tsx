@@ -16,11 +16,8 @@ export function Modal({
 }) {
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
-    // lock background scroll while open
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -33,22 +30,27 @@ export function Modal({
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center p-4">
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-slate-950/40" onClick={onClose} />
+      <button
+        type="button"
+        aria-label="Close"
+        className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-5 shadow-2xl"
+        className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-2xl"
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-5 flex items-center justify-between">
           <h3 className="text-base font-semibold">{title}</h3>
           <button
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="grid h-9 w-9 place-items-center rounded-md text-muted-foreground hover:bg-slate-100"
+            className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted"
           >
-            <X size={18} />
+            <X size={17} />
           </button>
         </div>
         {children}

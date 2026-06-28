@@ -9,11 +9,11 @@ export function Button({ className, variant = "primary", ...props }: ButtonProps
   return (
     <button
       className={cn(
-        "inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-60",
-        variant === "primary" && "bg-[#0b0e14] text-white shadow-card hover:bg-[#1c2230]",
-        variant === "secondary" && "border border-border bg-white text-foreground hover:bg-slate-50",
-        variant === "ghost" && "text-muted-foreground hover:bg-slate-50 hover:text-foreground",
-        variant === "danger" && "bg-red-500 text-white hover:bg-red-600",
+        "inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60",
+        variant === "primary" && "bg-foreground text-card hover:opacity-90",
+        variant === "secondary" && "border border-border bg-card text-foreground hover:bg-muted",
+        variant === "ghost" && "text-muted-foreground hover:bg-muted hover:text-foreground",
+        variant === "danger" && "bg-danger text-white hover:opacity-90",
         className
       )}
       {...props}

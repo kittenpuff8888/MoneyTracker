@@ -4,12 +4,13 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { X } from "lucide-react";
 import { QuickTransactionForm } from "@/components/transactions/QuickTransactionForm";
 
-/* ─── Context so any component can trigger the modal ─── */
+/* ─── Context — any component in the tree can call open() ─── */
 type ModalCtx = { open: () => void };
 const Ctx = createContext<ModalCtx>({ open: () => {} });
 export function useAddTransaction() { return useContext(Ctx); }
 
-export function AddTransactionModal({ children }: { children: ReactNode }) {
+/* Provider wraps the shell so both sidebar + topbar can trigger it */
+export function AddTransactionProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -28,9 +29,9 @@ export function AddTransactionModal({ children }: { children: ReactNode }) {
     <Ctx.Provider value={{ open: () => setIsOpen(true) }}>
       {children}
 
-      {/* Backdrop */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-end">
+          {/* Backdrop */}
           <button
             type="button"
             aria-label="Close"
@@ -43,8 +44,7 @@ export function AddTransactionModal({ children }: { children: ReactNode }) {
             role="dialog"
             aria-modal="true"
             aria-label="Add Transaction"
-            className="relative z-10 flex h-full w-full max-w-md flex-col bg-card shadow-2xl md:w-[420px]"
-            style={{ borderRadius: "var(--shell-radius) 0 0 var(--shell-radius)" }}
+            className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-border bg-card shadow-2xl"
           >
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <h2 className="text-base font-semibold">Add Transaction</h2>
@@ -57,7 +57,6 @@ export function AddTransactionModal({ children }: { children: ReactNode }) {
                 <X size={17} />
               </button>
             </div>
-
             <div className="flex-1 overflow-y-auto p-5">
               <QuickTransactionForm onSaved={() => setIsOpen(false)} />
             </div>
