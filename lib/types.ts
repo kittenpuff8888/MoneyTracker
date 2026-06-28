@@ -83,6 +83,8 @@ export type Budget = {
   user_id: string;
   category: string;
   monthly_limit: number;
+  period_start: string | null;
+  period_end: string | null;
   created_at: string;
 };
 

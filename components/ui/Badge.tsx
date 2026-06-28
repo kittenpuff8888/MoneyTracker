@@ -10,7 +10,7 @@ export function Badge({ className, tone = "sky", ...props }: BadgeProps) {
     <span
       className={cn(
         "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold",
-        tone === "sky" && "bg-sky-100 text-sky-700",
+        tone === "sky" && "bg-blue-50 text-blue-700",
         tone === "green" && "bg-emerald-100 text-emerald-700",
         tone === "orange" && "bg-orange-100 text-orange-700",
         tone === "red" && "bg-red-100 text-red-700",

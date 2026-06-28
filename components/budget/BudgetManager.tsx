@@ -35,18 +35,18 @@ export function BudgetManager({
   const usage = calculateBudgetUsage(budgets, transactions);
   const { register, handleSubmit, reset } = useForm<BudgetValues>({
     resolver: typedZodResolver<BudgetValues>(budgetSchema),
-    defaultValues: { category: categoryOptions[0] ?? "Other", monthly_limit: 0 }
+    defaultValues: { category: categoryOptions[0] ?? "Other", monthly_limit: 0, period_start: "", period_end: "" }
   });
 
   function startAdd() {
     setEditing(null);
-    reset({ category: categoryOptions[0] ?? "Other", monthly_limit: 0 });
+    reset({ category: categoryOptions[0] ?? "Other", monthly_limit: 0, period_start: "", period_end: "" });
     setOpen(true);
   }
 
   function editBudget(budget: Budget) {
     setEditing(budget);
-    reset({ id: budget.id, category: budget.category as BudgetValues["category"], monthly_limit: budget.monthly_limit });
+    reset({ id: budget.id, category: budget.category as BudgetValues["category"], monthly_limit: budget.monthly_limit, period_start: budget.period_start ?? "", period_end: budget.period_end ?? "" });
     setOpen(true);
   }
 
@@ -56,7 +56,7 @@ export function BudgetManager({
         await upsertBudget(values);
         setOpen(false);
         setEditing(null);
-        reset({ category: categoryOptions[0] ?? "Other", monthly_limit: 0 });
+        reset({ category: categoryOptions[0] ?? "Other", monthly_limit: 0, period_start: "", period_end: "" });
         toast.success(editing ? "Budget updated." : "Budget added.");
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Unable to save budget.");
@@ -80,9 +80,20 @@ export function BudgetManager({
             <Select {...register("category")}>{categoryOptions.map((category) => <option key={category}>{category}</option>)}</Select>
           </label>
           <label className="grid gap-1 text-sm font-medium">
-            Monthly Limit
+            Limit
             <Input type="number" min="0" step="any" inputMode="decimal" {...register("monthly_limit")} />
           </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm font-medium">
+              From date
+              <Input type="date" {...register("period_start")} />
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              To date
+              <Input type="date" {...register("period_end")} />
+            </label>
+          </div>
+          <p className="text-xs text-muted-foreground">Leave both dates empty to track the current month automatically.</p>
           <div className="flex justify-end"><Button disabled={pending}>{pending ? "Saving..." : editing ? "Save Budget" : "Add Budget"}</Button></div>
         </form>
       </Modal>
@@ -94,6 +105,11 @@ export function BudgetManager({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold">{item.budget.category}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.budget.period_start && item.budget.period_end
+                      ? `${item.budget.period_start} \u2192 ${item.budget.period_end}`
+                      : "This month"}
+                  </p>
                   <p className="text-sm text-muted-foreground">{formatIDR(item.spent)} spent of {formatIDR(item.budget.monthly_limit)}</p>
                 </div>
                 <div className="flex items-center gap-2">

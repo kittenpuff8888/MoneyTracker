@@ -114,11 +114,14 @@ export function calculateSpendingByCategory(transactions: Transaction[], start?:
 }
 
 export function calculateBudgetUsage(budgets: Budget[], transactions: Transaction[], date = new Date()): BudgetUsage[] {
-  const monthStart = startOfMonth(date);
-  const monthEnd = endOfMonth(date);
-  const spending = calculateSpendingByCategory(transactions, monthStart, monthEnd);
+  const defaultStart = startOfMonth(date);
+  const defaultEnd = endOfMonth(date);
 
   return budgets.map((budget) => {
+    // Use the budget's own date range when set, otherwise the current month.
+    const start = budget.period_start ? parseISO(budget.period_start) : defaultStart;
+    const end = budget.period_end ? parseISO(budget.period_end) : defaultEnd;
+    const spending = calculateSpendingByCategory(transactions, start, end);
     const spent = spending.find((item) => item.category === budget.category)?.amount ?? 0;
     const limit = toNumber(budget.monthly_limit);
     const percentUsed = limit > 0 ? (spent / limit) * 100 : 0;

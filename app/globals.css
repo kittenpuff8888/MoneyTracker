@@ -2,19 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 8888 Tracker design tokens (from reference): neutral canvas, white panels,
+   blue accent, hairline borders, mono numerals, serif display. */
 :root {
-  --background: 214 100% 98%;
-  --foreground: 229 58% 8%;
-  --card: 0 0% 100%;
-  --border: 214 38% 91%;
-  --muted: 210 55% 96%;
-  --muted-foreground: 222 13% 46%;
-  --primary: 199 94% 48%;
+  --background: 220 16% 94%;        /* #eef0f3 */
+  --foreground: 220 30% 6%;         /* #0b0e14 */
+  --card: 0 0% 100%;                /* #ffffff */
+  --border: 223 14% 92%;            /* #e7e9ee */
+  --muted: 210 20% 97%;             /* #f4f6f9 */
+  --muted-foreground: 217 13% 40%;  /* #5b6472 */
+  --primary: 221 83% 53%;           /* #2563eb */
   --primary-foreground: 0 0% 100%;
-  --accent: 199 100% 92%;
-  --success: 157 78% 41%;
-  --warning: 34 100% 63%;
-  --danger: 0 81% 67%;
+  --accent: 221 83% 53%;
+  --success: 221 83% 53%;
+  --warning: 35 92% 51%;            /* #f59e0b */
+  --danger: 358 75% 59%;            /* #e5484d */
 }
 
 * {
@@ -31,6 +33,7 @@ body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 button,
@@ -40,10 +43,31 @@ textarea {
   font: inherit;
 }
 
+/* Monospace, tabular figures for financial numbers (JetBrains Mono). */
+.num {
+  font-family: var(--font-mono), ui-monospace, "JetBrains Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Small uppercase section/stat labels seen throughout the design. */
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Newsreader serif for occasional display headings. */
+.display-serif {
+  font-family: var(--font-serif), Georgia, serif;
+}
+
 .sky-grid {
   background-image:
-    linear-gradient(rgba(14, 165, 233, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(14, 165, 233, 0.08) 1px, transparent 1px);
+    linear-gradient(rgba(37, 99, 235, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.06) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 

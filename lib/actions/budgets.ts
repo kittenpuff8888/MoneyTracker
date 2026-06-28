@@ -17,7 +17,12 @@ async function requireUser() {
 export async function upsertBudget(input: unknown) {
   const parsed = budgetSchema.parse(input);
   const { supabase, user } = await requireUser();
-  const payload = { category: parsed.category, monthly_limit: parsed.monthly_limit };
+  const payload = {
+    category: parsed.category,
+    monthly_limit: parsed.monthly_limit,
+    period_start: parsed.period_start ?? null,
+    period_end: parsed.period_end ?? null
+  };
   const query = parsed.id
     ? supabase.from("budgets").update(payload).eq("id", parsed.id).eq("user_id", user.id)
     : supabase.from("budgets").insert({ ...payload, user_id: user.id });

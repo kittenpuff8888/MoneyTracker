@@ -44,10 +44,14 @@ export const transactionSchema = z
     }
   });
 
+const optionalDate = z.string().optional().nullable().or(z.literal("").transform(() => null));
+
 export const budgetSchema = z.object({
   id: z.string().uuid().optional(),
   category: z.string().min(1, "Category is required"),
-  monthly_limit: z.coerce.number().positive("Monthly limit must be greater than 0")
+  monthly_limit: z.coerce.number().positive("Limit must be greater than 0"),
+  period_start: optionalDate,
+  period_end: optionalDate
 });
 
 export const subscriptionSchema = z.object({

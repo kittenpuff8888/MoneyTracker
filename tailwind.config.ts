@@ -22,12 +22,18 @@ const config: Config = {
         warning: "hsl(var(--warning))",
         danger: "hsl(var(--danger))"
       },
+      fontFamily: {
+        sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "monospace"],
+        serif: ["var(--font-serif)", "Newsreader", "Georgia", "serif"]
+      },
       boxShadow: {
-        soft: "0 18px 60px rgba(15, 23, 42, 0.08)",
-        card: "0 12px 35px rgba(15, 23, 42, 0.06)"
+        soft: "0 1px 2px rgba(11, 14, 20, 0.05)",
+        card: "0 1px 2px rgba(11, 14, 20, 0.05)"
       },
       borderRadius: {
-        panel: "0.5rem"
+        panel: "1rem",
+        xl2: "1rem"
       }
     }
   },

@@ -34,7 +34,7 @@ export function AppSidebar() {
       <Link href="/dashboard" className="mb-8 flex items-center gap-3 px-2">
         <BrandMark size={42} />
         <div>
-          <p className="text-lg font-bold">8888 Tracker</p>
+          <p className="text-lg font-bold tracking-tight">8888 Tracker</p>
           <p className="max-w-40 text-xs leading-4 text-muted-foreground">Where Prosperity will Find you.</p>
         </div>
       </Link>
@@ -49,8 +49,8 @@ export function AppSidebar() {
               href={item.href}
               className={cn(
                 "flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted-foreground transition",
-                active && "bg-sky-100 text-sky-700",
-                !active && "hover:bg-sky-50 hover:text-foreground"
+                active && "bg-blue-50 text-blue-700",
+                !active && "hover:bg-slate-50 hover:text-foreground"
               )}
             >
               <Icon size={18} />
