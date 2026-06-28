@@ -29,7 +29,15 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-theme="light" suppressHydrationWarning>
+      <head>
+        {/* Apply saved theme + hide-balances before paint to avoid a flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');if(localStorage.getItem('hideBalances')==='1')document.documentElement.classList.add('balances-hidden');}catch(e){}})();`
+          }}
+        />
+      </head>
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} ${newsreader.variable} ${inter.className}`}
       >

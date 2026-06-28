@@ -2,38 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Design tokens ─────────────────────────────────────────── */
+/* ─── 8888 Tracker v2 design tokens ─────────────────────────────
+   Single source of truth. Theme switches via [data-theme="dark"]
+   on <html>. Tailwind colors in tailwind.config.ts resolve to
+   these same hex vars, so utility classes and the inline-styled
+   reference components stay perfectly in sync. */
 :root {
-  --background: 220 16% 94%;        /* #eef0f3 — frame */
-  --foreground: 220 30% 6%;         /* #0b0e14 — ink */
-  --card: 0 0% 100%;                /* #ffffff — panel */
-  --border: 223 14% 92%;            /* #e7e9ee */
-  --muted: 210 20% 97%;             /* #f4f6f9 */
-  --muted-foreground: 217 13% 40%;  /* #5b6472 */
-  --primary: 221 83% 53%;           /* #2563eb — blue accent */
-  --primary-foreground: 0 0% 100%;
-  --accent: 221 83% 53%;
-  --success: 160 60% 40%;           /* #22c55e */
-  --warning: 35 92% 51%;            /* #f59e0b */
-  --danger: 358 75% 59%;            /* #e5484d */
-  --ink: 220 30% 6%;                /* #0b0e14 — nav/button */
-  --shell-radius: 1.625rem;         /* 26px outer shell */
+  --bg: #eef0f3;
+  --frame: #eef0f3;
+  --panel: #ffffff;
+  --text: #0b0e14;
+  --muted: #5b6472;
+  --faint: #9aa1ad;
+  --border: #e7e9ee;
+  --hair: #eff1f4;
+  --soft: #f4f6f9;
+  --softer: #fafbfc;
+  --ink: #0b0e14;
+  --accent: #2563eb;
+  --accentSoft: rgba(37, 99, 235, 0.1);
+  --accentLine: rgba(37, 99, 235, 0.28);
+  --up: #2563eb;
+  --upSoft: rgba(37, 99, 235, 0.1);
+  --down: #e5484d;
+  --downSoft: rgba(229, 72, 77, 0.1);
+  --warn: #f59e0b;
+  --warnSoft: rgba(245, 158, 11, 0.12);
+  --r: 16px;
+  --r2: 12px;
+  --shellR: 26px;
+  --sh: 0 1px 2px rgba(11, 14, 20, 0.05);
+
+  --sans: var(--font-sans), "Inter", system-ui, sans-serif;
+  --mono: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
+  --serif: var(--font-serif), "Newsreader", Georgia, serif;
 }
 
-.dark {
-  --background: 222 28% 8%;         /* #0f1117 */
-  --foreground: 210 20% 94%;        /* #edf0f5 */
-  --card: 222 24% 12%;              /* #181d27 */
-  --border: 220 18% 20%;            /* #282f3e */
-  --muted: 222 22% 15%;             /* #1c2230 */
-  --muted-foreground: 216 14% 55%;  /* #7d8fa3 */
-  --primary: 221 83% 60%;
-  --primary-foreground: 0 0% 100%;
-  --accent: 221 83% 60%;
-  --success: 160 60% 45%;
-  --warning: 35 92% 55%;
-  --danger: 358 75% 63%;
-  --ink: 210 20% 94%;               /* invert for dark: labels become light */
+[data-theme="dark"] {
+  --bg: #080a0d;
+  --frame: #080a0d;
+  --panel: #11151b;
+  --text: #e9edf3;
+  --muted: #8a93a3;
+  --faint: #5b6473;
+  --border: #1c222c;
+  --hair: #191e27;
+  --soft: #161b22;
+  --softer: #11151b;
+  --ink: #e9edf3;
+  --accent: #5b8cff;
+  --accentSoft: rgba(91, 140, 255, 0.12);
+  --accentLine: rgba(91, 140, 255, 0.32);
+  --up: #5b8cff;
+  --upSoft: rgba(91, 140, 255, 0.12);
+  --down: #ff5c61;
+  --downSoft: rgba(255, 92, 97, 0.12);
+  --warn: #f3b03c;
+  --warnSoft: rgba(243, 176, 60, 0.14);
+  --sh: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 * { box-sizing: border-box; }
@@ -43,73 +69,58 @@ html { scroll-behavior: smooth; }
 body {
   margin: 0;
   min-height: 100vh;
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
+  background: var(--frame);
+  color: var(--text);
+  font-family: var(--sans);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
 button, input, select, textarea { font: inherit; }
 
-/* ── Utility: monospace tabular figures for all amounts ─── */
+::selection { background: rgba(37, 99, 235, 0.18); }
+
+/* ── Monospace tabular figures for all amounts ── */
 .num {
-  font-family: var(--font-mono), ui-monospace, "JetBrains Mono", monospace;
+  font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
 
-/* ── Utility: small uppercase eyebrow labels ─── */
+/* ── Small uppercase eyebrow labels ── */
 .eyebrow {
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
   font-size: 0.6875rem;
   font-weight: 600;
-  color: hsl(var(--muted-foreground));
+  color: var(--faint);
 }
 
-/* ── Utility: Newsreader serif for display headings ─── */
-.display-serif {
-  font-family: var(--font-serif), Georgia, serif;
-}
+.display-serif { font-family: var(--serif); }
 
-/* ── Masked balance (hide-balances toggle) ─── */
+/* ── Masked balance (hide-balances toggle) ── */
 .balances-hidden .num-balance {
   filter: blur(6px);
   user-select: none;
   pointer-events: none;
 }
 
-/* ── Subtle dot-grid on frame background ─── */
-.sky-grid {
-  background-image:
-    linear-gradient(rgba(37, 99, 235, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(37, 99, 235, 0.06) 1px, transparent 1px);
-  background-size: 32px 32px;
+/* ── Scrollbars ── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
-
-/* ── Scrollbar thinning ─── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
 
-/* ── Topbar icon button ─── */
-.icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.625rem;
-  border: 1px solid hsl(var(--border));
-  background: hsl(var(--muted));
-  color: hsl(var(--muted-foreground));
-  transition: color 0.15s, background 0.15s;
-  cursor: pointer;
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
-.icon-btn:hover {
-  background: hsl(var(--border));
-  color: hsl(var(--foreground));
-}
+.animate-fadein { animation: fadein 0.14s ease; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

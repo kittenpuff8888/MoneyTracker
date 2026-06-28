@@ -1,22 +1,23 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { upsertTransaction } from "@/lib/actions/transactions";
 import { typedZodResolver } from "@/lib/form-resolver";
 import { transactionSchema } from "@/lib/validations";
 import type { Account } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import type { z } from "zod";
 
 type Values = z.infer<typeof transactionSchema>;
+type TxType = "outcome" | "income" | "transfer";
 
 const today = new Date().toISOString().slice(0, 10);
+const METHODS = ["QRIS", "Transfer", "Card", "VA", "Cash", "E-Money"];
 
-function emptyValues(cat: string): Values {
+function emptyValues(cat: string, type: TxType): Values {
   return {
-    type: "outcome",
+    type,
     name: "",
     amount: 0,
     fee: 0,
@@ -28,9 +29,23 @@ function emptyValues(cat: string): Values {
   };
 }
 
-export function QuickTransactionForm({ onSaved }: { onSaved?: () => void }) {
+const lbl = "mb-1.5 text-[11.5px] font-semibold";
+const field =
+  "w-full rounded-[10px] px-[11px] py-[10px] text-[13px] outline-none";
+const fieldStyle = { background: "var(--panel)", border: "1px solid var(--border)", color: "var(--text)" };
+
+export function QuickTransactionForm({
+  presetType = "outcome",
+  onSaved,
+  onCancel
+}: {
+  presetType?: TxType;
+  onSaved?: () => void;
+  onCancel?: () => void;
+}) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [method, setMethod] = useState("QRIS");
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -45,28 +60,37 @@ export function QuickTransactionForm({ onSaved }: { onSaved?: () => void }) {
 
   const { register, handleSubmit, control, reset, setValue, formState: { errors } } = useForm<Values>({
     resolver: typedZodResolver<Values>(transactionSchema),
-    defaultValues: emptyValues("Other")
+    defaultValues: emptyValues("Other", presetType)
   });
 
-  // When categories load, update the category field (don't reset whole form)
   useEffect(() => {
-    if (categories.length > 0) {
-      setValue("category", categories[0]);
-    }
+    if (categories.length > 0) setValue("category", categories[0]);
   }, [categories, setValue]);
 
-  const type = useWatch({ control, name: "type" });
+  const type = (useWatch({ control, name: "type" }) ?? presetType) as TxType;
+  const isMove = type === "transfer";
+  const feeLabel = isMove ? "Transfer fee" : type === "income" ? "Admin fee" : "Fee / tax";
 
-  const feeLabel =
-    type === "income" ? "Fee (deducted from deposit)"
-    : type === "transfer" ? "Transfer Fee"
-    : "Fee";
+  const walletField = type === "income" ? "to_account_id" : "from_account_id";
+
+  const segments = useMemo(
+    () => [
+      { t: "outcome" as const, label: "Expense", activeBg: "var(--down)" },
+      { t: "income" as const, label: "Income", activeBg: "var(--up)" },
+      { t: "transfer" as const, label: "Move Money", activeBg: "var(--ink)" }
+    ],
+    []
+  );
 
   function onSubmit(values: Values) {
+    const payload: Values = {
+      ...values,
+      notes: method ? `${method}${values.notes ? ` · ${values.notes}` : ""}` : values.notes
+    };
     startTransition(async () => {
       try {
-        await upsertTransaction(values);
-        reset(emptyValues(categories[0] ?? "Other"));
+        await upsertTransaction(payload);
+        reset(emptyValues(categories[0] ?? "Other", type));
         toast.success("Transaction added.");
         onSaved?.();
       } catch (err) {
@@ -76,138 +100,128 @@ export function QuickTransactionForm({ onSaved }: { onSaved?: () => void }) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-      {/* Type segmented control */}
-      <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</p>
-        <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
-          {(["outcome", "income", "transfer"] as const).map((t) => (
-            <label
-              key={t}
-              className={cn(
-                "flex cursor-pointer items-center justify-center rounded-lg py-2 text-xs font-semibold transition",
-                type === t ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <input type="radio" {...register("type")} value={t} className="sr-only" />
-              {t === "outcome" ? "Expense" : t === "income" ? "Income" : "Move Money"}
-            </label>
-          ))}
+    <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
+      <div className="flex-1 overflow-y-auto px-[22px] py-5">
+        {/* Type segmented control */}
+        <div className="mb-4 flex gap-0.5 rounded-[11px] p-[3px]" style={{ background: "var(--soft)", border: "1px solid var(--border)" }}>
+          {segments.map((s) => {
+            const active = type === s.t;
+            return (
+              <label
+                key={s.t}
+                className="flex-1 cursor-pointer rounded-[9px] px-1 py-2 text-center text-[12.5px] font-semibold transition"
+                style={{ background: active ? s.activeBg : "transparent", color: active ? "var(--panel)" : "var(--muted)" }}
+              >
+                <input type="radio" {...register("type")} value={s.t} className="sr-only" />
+                {s.label}
+              </label>
+            );
+          })}
+        </div>
+
+        {/* Name */}
+        <div className="mb-3.5">
+          <div className={lbl}>Transaction name</div>
+          <input {...register("name")} placeholder="e.g. Starbucks Coffee, Grab Ride" className={field} style={fieldStyle} />
+        </div>
+
+        {/* Date + Amount */}
+        <div className="mb-3.5 grid grid-cols-2 gap-3">
+          <div>
+            <div className={lbl}>Date</div>
+            <input type="date" {...register("transaction_date")} className={`num ${field}`} style={fieldStyle} />
+          </div>
+          <div>
+            <div className={lbl}>Amount</div>
+            <div className="flex items-center gap-1.5 rounded-[10px] px-[11px] py-[9px]" style={fieldStyle}>
+              <span className="num text-[12px]" style={{ color: "var(--muted)" }}>Rp</span>
+              <input type="number" min="0" step="any" inputMode="numeric" {...register("amount")} placeholder="50000" className="num w-full border-none bg-transparent text-[12.5px] outline-none" style={{ color: "var(--text)" }} />
+            </div>
+            {errors.amount && <span className="text-[11px]" style={{ color: "var(--down)" }}>{errors.amount.message}</span>}
+          </div>
+        </div>
+
+        {/* Move: from + to */}
+        {isMove && (
+          <div className="mb-3.5 grid grid-cols-2 gap-3">
+            <div>
+              <div className={lbl}>From wallet</div>
+              <select {...register("from_account_id")} className={`${field} cursor-pointer`} style={fieldStyle}>
+                <option value="">Select</option>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <div className={lbl}>To wallet</div>
+              <select {...register("to_account_id")} className={`${field} cursor-pointer`} style={fieldStyle}>
+                <option value="">Select</option>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Non-move: category + wallet */}
+        {!isMove && (
+          <div className="mb-3.5 grid grid-cols-2 gap-3">
+            <div>
+              <div className={lbl}>Category</div>
+              <select {...register("category")} className={`${field} cursor-pointer`} style={fieldStyle}>
+                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <div className={lbl}>Wallet</div>
+              <select {...register(walletField)} className={`${field} cursor-pointer`} style={fieldStyle}>
+                <option value="">Select</option>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Fee + Method */}
+        <div className="mb-3.5 grid grid-cols-2 gap-3">
+          <div>
+            <div className={lbl}>{feeLabel}</div>
+            <div className="flex items-center gap-1.5 rounded-[10px] px-[11px] py-[9px]" style={fieldStyle}>
+              <span className="num text-[12px]" style={{ color: "var(--muted)" }}>Rp</span>
+              <input type="number" min="0" step="any" inputMode="numeric" {...register("fee")} placeholder="0" className="num w-full border-none bg-transparent text-[12.5px] outline-none" style={{ color: "var(--text)" }} />
+            </div>
+          </div>
+          <div>
+            <div className={lbl}>Payment method</div>
+            <select value={method} onChange={(e) => setMethod(e.target.value)} className={`${field} cursor-pointer`} style={fieldStyle}>
+              {METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div>
+          <div className={lbl}>Notes</div>
+          <textarea {...register("notes")} placeholder="Add any additional details…" className={`${field} min-h-[72px] resize-y`} style={{ ...fieldStyle, fontFamily: "var(--sans)" }} />
         </div>
       </div>
 
-      {/* Name / Merchant */}
-      <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Name / Merchant
-        <input
-          {...register("name")}
-          placeholder="e.g. Grab, Indomaret…"
-          className="h-10 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
-        />
-      </label>
-
-      {/* Amount */}
-      <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Amount (Rp)
-        <input
-          type="number"
-          min="0"
-          step="any"
-          inputMode="decimal"
-          {...register("amount")}
-          className="num h-10 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
-        />
-        {errors.amount && <span className="text-xs text-danger">{errors.amount.message}</span>}
-      </label>
-
-      {/* Category — hidden for transfer */}
-      {type !== "transfer" && (
-        <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Category
-          <select
-            {...register("category")}
-            className="h-10 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none focus:border-primary"
-          >
-            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </label>
-      )}
-
-      {/* From / To wallets */}
-      <div className={cn("grid gap-3", type === "transfer" ? "grid-cols-2" : "grid-cols-1")}>
-        {type !== "income" && (
-          <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            From Wallet
-            <select
-              {...register("from_account_id")}
-              className="h-10 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none focus:border-primary"
-            >
-              <option value="">Select</option>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-            {errors.from_account_id && <span className="text-xs text-danger">{errors.from_account_id.message}</span>}
-          </label>
-        )}
-        {type !== "outcome" && (
-          <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            To Wallet
-            <select
-              {...register("to_account_id")}
-              className="h-10 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none focus:border-primary"
-            >
-              <option value="">Select</option>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-            {errors.to_account_id && <span className="text-xs text-danger">{errors.to_account_id.message}</span>}
-          </label>
-        )}
-      </div>
-
-      {/* Fee */}
-      <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        {feeLabel}
-        <input
-          type="number"
-          min="0"
-          step="any"
-          inputMode="decimal"
-          {...register("fee")}
-          className="num h-10 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/20"
-        />
-      </label>
-
-      {/* Date */}
-      <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Date
-        <input
-          type="date"
-          {...register("transaction_date")}
-          className="num h-10 rounded-lg border border-border bg-muted px-3 text-sm text-foreground outline-none focus:border-primary"
-        />
-      </label>
-
-      {/* Notes */}
-      <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Notes (optional)
-        <textarea
-          {...register("notes")}
-          placeholder="Add a note…"
-          rows={2}
-          className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-        />
-      </label>
-
-      <button
-        type="submit"
-        disabled={pending || accounts.length === 0}
-        className="mt-1 h-11 w-full rounded-xl bg-foreground text-sm font-semibold text-card transition hover:opacity-90 disabled:opacity-50"
+      {/* Sticky footer */}
+      <div
+        className="sticky bottom-0 flex items-center justify-between gap-2.5 px-[22px] py-4"
+        style={{ borderTop: "1px solid var(--hair)", background: "var(--panel)" }}
       >
-        {accounts.length === 0
-          ? "Add a wallet first"
-          : pending
-          ? "Saving…"
-          : "Add Transaction"}
-      </button>
+        <span className="text-[11.5px]" style={{ color: "var(--faint)" }}>Contact support</span>
+        <div className="flex gap-2.5">
+          <button type="button" onClick={onCancel} className="rounded-[10px] px-4 py-2.5 text-[13px] font-semibold" style={{ border: "1px solid var(--border)", color: "var(--muted)" }}>Cancel</button>
+          <button
+            type="submit"
+            disabled={pending || accounts.length === 0}
+            className="rounded-[10px] px-[18px] py-2.5 text-[13px] font-semibold transition hover:opacity-90 disabled:opacity-50"
+            style={{ background: "var(--ink)", color: "var(--panel)" }}
+          >
+            {accounts.length === 0 ? "Add a wallet first" : pending ? "Saving…" : "Save Transaction"}
+          </button>
+        </div>
+      </div>
     </form>
   );
 }

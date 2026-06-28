@@ -3,19 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
-import {
-  Download,
-  Eye,
-  EyeOff,
-  Moon,
-  Sun,
-  Languages,
-  Calendar,
-  Search,
-  X
-} from "lucide-react";
-import { BrandMark } from "@/components/brand/BrandMark";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type AppTopbarProps = {
   name?: string | null;
@@ -23,21 +11,17 @@ type AppTopbarProps = {
   avatarUrl?: string | null;
 };
 
-function fmt(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-function presets() {
-  const now = new Date();
-  const som = new Date(now.getFullYear(), now.getMonth(), 1);
-  const eom = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const last30 = new Date(now); last30.setDate(last30.getDate() - 29);
-  const soy = new Date(now.getFullYear(), 0, 1);
-  return [
-    { key: "month", label: "Month", from: fmt(som), to: fmt(eom) },
-    { key: "30d", label: "30d", from: fmt(last30), to: fmt(now) },
-    { key: "year", label: "Year", from: fmt(soy), to: fmt(now) }
-  ];
+function ymd(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function parse(s: string | null): Date | null {
+  if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
 export function AppTopbar({ name, email, avatarUrl }: AppTopbarProps) {
@@ -48,226 +32,253 @@ export function AppTopbar({ name, email, avatarUrl }: AppTopbarProps) {
   const [dark, setDark] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [lang, setLang] = useState<"ID" | "EN">("ID");
-  const [search, setSearch] = useState("");
-  const [calOpen, setCalOpen] = useState(false);
+  const [search, setSearch] = useState(searchParams.get("q") ?? "");
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const rangeRef = useRef<HTMLDivElement>(null);
 
-  const from = searchParams.get("from") ?? "";
-  const to = searchParams.get("to") ?? "";
-  const [customFrom, setCustomFrom] = useState(from);
-  const [customTo, setCustomTo] = useState(to);
+  const now = new Date();
+  const urlFrom = parse(searchParams.get("from"));
+  const urlTo = parse(searchParams.get("to"));
+  const from = urlFrom ?? new Date(now.getFullYear(), now.getMonth(), 1);
+  const to = urlTo ?? new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-  // Sync date inputs when URL params change
+  const [calY, setCalY] = useState(from.getFullYear());
+  const [calM, setCalM] = useState(from.getMonth());
+
+  // hydrate persisted theme + hide-balances state
   useEffect(() => {
-    setCustomFrom(from);
-    setCustomTo(to);
-  }, [from, to]);
+    const t = typeof window !== "undefined" ? localStorage.getItem("theme") : null;
+    setDark(t === "dark");
+    setHidden(typeof window !== "undefined" && localStorage.getItem("hideBalances") === "1");
+  }, []);
 
-  // Dark mode — toggle class on <html>
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
   }, [dark]);
-
-  // Hide balances — toggle class on <body>
   useEffect(() => {
-    document.body.classList.toggle("balances-hidden", hidden);
+    document.documentElement.classList.toggle("balances-hidden", hidden);
   }, [hidden]);
 
-  // Live search — push to current page with q param
-  const doSearch = useCallback((value: string) => {
+  // close range popover on outside click
+  useEffect(() => {
+    if (!rangeOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (rangeRef.current && !rangeRef.current.contains(e.target as Node)) setRangeOpen(false);
+    };
+    window.addEventListener("mousedown", onDown);
+    return () => window.removeEventListener("mousedown", onDown);
+  }, [rangeOpen]);
+
+  const rangeLabel = useMemo(() => {
+    const sameYear = from.getFullYear() === to.getFullYear();
+    const sameMonth = sameYear && from.getMonth() === to.getMonth();
+    if (sameMonth) return `${from.getDate()}–${to.getDate()} ${MONTHS_SHORT[to.getMonth()]} ${to.getFullYear()}`;
+    return `${from.getDate()} ${MONTHS_SHORT[from.getMonth()]} – ${to.getDate()} ${MONTHS_SHORT[to.getMonth()]} ${to.getFullYear()}`;
+  }, [from, to]);
+
+  function applyRange(f: Date, t: Date) {
+    const params = new URLSearchParams(Array.from(searchParams.entries()));
+    params.set("from", ymd(f));
+    params.set("to", ymd(t));
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
+  function submitSearch(value: string) {
     setSearch(value);
-    const params = new URLSearchParams(Array.from(searchParams.entries()));
+    const params = new URLSearchParams();
     if (value) params.set("q", value);
-    else params.delete("q");
-    router.push(`${pathname}?${params.toString()}`);
-  }, [router, pathname, searchParams]);
-
-  function applyRange(f: string, t: string) {
-    const params = new URLSearchParams(Array.from(searchParams.entries()));
-    if (f) params.set("from", f);
-    if (t) params.set("to", t);
-    router.push(`${pathname}?${params.toString()}`);
-    setCalOpen(false);
+    router.push(`/transactions${value ? `?${params.toString()}` : ""}`);
   }
 
-  function exportCSV() {
-    // Trigger browser print as simple export; a real CSV would need a server action
-    window.print();
+  // calendar cells for displayed month
+  const cells = useMemo(() => {
+    const first = new Date(calY, calM, 1).getDay();
+    const days = new Date(calY, calM + 1, 0).getDate();
+    const out: (number | null)[] = [];
+    for (let i = 0; i < first; i++) out.push(null);
+    for (let d = 1; d <= days; d++) out.push(d);
+    while (out.length % 7 !== 0) out.push(null);
+    return out;
+  }, [calY, calM]);
+
+  function pickDay(d: number) {
+    const picked = new Date(calY, calM, d);
+    // two-click range: if a full range exists, start over; else extend
+    if (from && to && ymd(from) !== ymd(to)) {
+      applyRange(picked, picked);
+    } else if (picked >= from) {
+      applyRange(from, picked);
+    } else {
+      applyRange(picked, from);
+    }
   }
 
-  const ps = presets();
+  function preset(kind: "month" | "14d" | "7d") {
+    const t = new Date();
+    if (kind === "month") {
+      applyRange(new Date(t.getFullYear(), t.getMonth(), 1), new Date(t.getFullYear(), t.getMonth() + 1, 0));
+    } else {
+      const days = kind === "14d" ? 13 : 6;
+      const f = new Date(t); f.setDate(f.getDate() - days);
+      applyRange(f, t);
+    }
+  }
+
+  const inRange = (d: number) => {
+    const day = new Date(calY, calM, d);
+    return day >= new Date(from.getFullYear(), from.getMonth(), from.getDate()) &&
+      day <= new Date(to.getFullYear(), to.getMonth(), to.getDate());
+  };
+  const isEnd = (d: number) => {
+    const s = ymd(new Date(calY, calM, d));
+    return s === ymd(from) || s === ymd(to);
+  };
+
+  const iconBtn = "flex h-[34px] w-[34px] items-center justify-center rounded-lg cursor-pointer transition-colors";
+  const iconBtnStyle = { border: "1px solid var(--border)", color: "var(--muted)" };
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-card/95 px-4 py-2.5 backdrop-blur md:px-5">
-      <div className="flex items-center gap-2">
-        {/* Mobile logo */}
-        <Link href="/dashboard" className="flex min-w-0 items-center gap-2 md:hidden">
-          <BrandMark size={32} />
-          <span className="truncate text-sm font-bold tracking-tight">8888 Tracker</span>
-        </Link>
-
+    <header
+      className="sticky top-0 z-40 md:top-3.5"
+      style={{ background: "var(--panel)", borderBottom: "1px solid var(--hair)", borderRadius: "0 var(--shellR) 0 0" }}
+    >
+      <div className="flex flex-wrap items-center gap-[14px] px-4 py-[13px] md:px-[22px]">
         {/* Search */}
-        <div className="relative hidden min-w-0 flex-1 md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-          <input
-            value={search}
-            onChange={(e) => doSearch(e.target.value)}
-            placeholder="Search transactions…"
-            className="h-9 w-full max-w-xs rounded-lg border border-border bg-muted pl-8 pr-8 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/30"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => doSearch("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X size={13} />
-            </button>
-          )}
+        <div className="relative min-w-[160px] flex-1 md:max-w-[380px]">
+          <div className="flex items-center gap-2 rounded-[10px] px-[11px] py-[7px]" style={{ background: "var(--soft)", border: "1px solid var(--border)" }}>
+            <span style={{ color: "var(--faint)" }} className="text-[13px]">⌕</span>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submitSearch(search); }}
+              placeholder="Search transactions…"
+              className="w-full border-none bg-transparent text-[13px] outline-none"
+              style={{ color: "var(--text)" }}
+            />
+          </div>
         </div>
 
-        <div className="flex-1 md:hidden" />
+        <div className="hidden flex-1 md:block" />
 
-        {/* Date range picker */}
-        <div className="relative hidden lg:block">
+        {/* Date range */}
+        <div className="relative" ref={rangeRef}>
           <button
             type="button"
-            onClick={() => setCalOpen((v) => !v)}
-            className="flex h-9 items-center gap-1.5 rounded-lg border border-border bg-muted px-3 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+            onClick={() => setRangeOpen((v) => !v)}
+            className="num flex items-center gap-2 rounded-[9px] px-[11px] py-1.5 text-[12px] font-semibold"
+            style={{ border: "1px solid var(--border)", color: "var(--text)" }}
           >
-            <Calendar size={13} />
-            {from && to ? `${from} → ${to}` : "Date range"}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M3 10h18M8 2v4M16 2v4" /></svg>
+            {rangeLabel}<span className="text-[9px]" style={{ color: "var(--faint)" }}>▾</span>
           </button>
 
-          {calOpen && (
-            <div className="absolute right-0 top-11 z-50 w-80 rounded-xl border border-border bg-card p-4 shadow-xl">
+          {rangeOpen && (
+            <div
+              className="animate-fadein absolute right-0 top-[42px] z-[60] w-[288px] rounded-[14px] p-4"
+              style={{ background: "var(--panel)", border: "1px solid var(--border)", boxShadow: "0 16px 40px rgba(11,14,20,.18)" }}
+            >
               <div className="mb-3 flex gap-1.5">
-                {ps.map((p) => {
-                  const active = p.from === from && p.to === to;
+                {([["month", "This month"], ["14d", "Last 14d"], ["7d", "This week"]] as const).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => preset(id)}
+                    className="flex-1 rounded-lg px-1 py-[7px] text-center text-[11px] font-semibold"
+                    style={{ border: "1px solid var(--border)", color: "var(--text)" }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="mb-2.5 flex items-center justify-between">
+                <span className="text-[14px] font-bold">{MONTHS[calM]} {calY}</span>
+                <div className="flex gap-1.5">
+                  <button type="button" onClick={() => { const m = calM - 1; if (m < 0) { setCalM(11); setCalY(calY - 1); } else setCalM(m); }} className="flex h-[26px] w-[26px] items-center justify-center rounded-[7px]" style={{ border: "1px solid var(--border)", color: "var(--muted)" }}>‹</button>
+                  <button type="button" onClick={() => { const m = calM + 1; if (m > 11) { setCalM(0); setCalY(calY + 1); } else setCalM(m); }} className="flex h-[26px] w-[26px] items-center justify-center rounded-[7px]" style={{ border: "1px solid var(--border)", color: "var(--muted)" }}>›</button>
+                </div>
+              </div>
+              <div className="mb-1 grid grid-cols-7 gap-0.5">
+                {DOW.map((d) => <div key={d} className="py-1 text-center text-[10px] font-semibold" style={{ color: "var(--faint)" }}>{d}</div>)}
+              </div>
+              <div className="grid grid-cols-7 gap-0.5">
+                {cells.map((d, i) => {
+                  if (d === null) return <div key={i} className="aspect-square" />;
+                  const end = isEnd(d);
+                  const within = inRange(d);
                   return (
                     <button
-                      key={p.key}
+                      key={i}
                       type="button"
-                      onClick={() => applyRange(p.from, p.to)}
-                      className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition ${
-                        active
-                          ? "bg-foreground text-card"
-                          : "bg-muted text-muted-foreground hover:text-foreground"
-                      }`}
+                      onClick={() => pickDay(d)}
+                      className="num flex aspect-square items-center justify-center text-[11.5px]"
+                      style={{
+                        borderRadius: end ? "9px" : within ? "0" : "8px",
+                        background: end ? "var(--ink)" : within ? "var(--accentSoft)" : "transparent",
+                        color: end ? "var(--panel)" : within ? "var(--accent)" : "var(--text)",
+                        fontWeight: end ? 700 : within ? 600 : 400
+                      }}
                     >
-                      {p.label}
+                      {d}
                     </button>
                   );
                 })}
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="grid gap-1 text-xs font-medium text-muted-foreground">
-                  From
-                  <input
-                    type="date"
-                    value={customFrom}
-                    onChange={(e) => setCustomFrom(e.target.value)}
-                    className="h-8 rounded-lg border border-border bg-muted px-2 text-xs outline-none focus:border-primary"
-                  />
-                </label>
-                <label className="grid gap-1 text-xs font-medium text-muted-foreground">
-                  To
-                  <input
-                    type="date"
-                    value={customTo}
-                    onChange={(e) => setCustomTo(e.target.value)}
-                    className="h-8 rounded-lg border border-border bg-muted px-2 text-xs outline-none focus:border-primary"
-                  />
-                </label>
-              </div>
-              <button
-                type="button"
-                onClick={() => applyRange(customFrom, customTo)}
-                className="mt-3 w-full rounded-lg bg-foreground py-2 text-xs font-semibold text-card transition hover:opacity-90"
-              >
-                Apply
-              </button>
             </div>
           )}
         </div>
 
         {/* Icon buttons */}
-        <button
-          type="button"
-          aria-label="Export"
-          onClick={exportCSV}
-          title="Export / Print"
-          className="icon-btn"
-        >
-          <Download size={16} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button type="button" title="Export / Print" onClick={() => window.print()} className={iconBtn} style={iconBtnStyle}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg>
+          </button>
 
-        <button
-          type="button"
-          aria-label={hidden ? "Show balances" : "Hide balances"}
-          onClick={() => setHidden((v) => !v)}
-          title={hidden ? "Show balances" : "Hide balances"}
-          className="icon-btn"
-        >
-          {hidden ? <EyeOff size={16} /> : <Eye size={16} />}
-        </button>
+          <button
+            type="button"
+            title={hidden ? "Show balances" : "Hide balances"}
+            onClick={() => { const v = !hidden; setHidden(v); localStorage.setItem("hideBalances", v ? "1" : "0"); }}
+            className={iconBtn}
+            style={{ border: "1px solid var(--border)", color: hidden ? "var(--accent)" : "var(--muted)" }}
+          >
+            {hidden ? (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C5 20 1 12 1 12a18.5 18.5 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+            )}
+          </button>
 
-        <button
-          type="button"
-          aria-label="Toggle dark mode"
-          onClick={() => setDark((v) => !v)}
-          title={dark ? "Light mode" : "Dark mode"}
-          className="icon-btn"
-        >
-          {dark ? <Sun size={16} /> : <Moon size={16} />}
-        </button>
+          <button
+            type="button"
+            title={dark ? "Light mode" : "Dark mode"}
+            onClick={() => { const v = !dark; setDark(v); localStorage.setItem("theme", v ? "dark" : "light"); }}
+            className={iconBtn}
+            style={iconBtnStyle}
+          >
+            {dark ? (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="4" /><line x1="12" y1="2" x2="12" y2="4" /><line x1="12" y1="20" x2="12" y2="22" /><line x1="2" y1="12" x2="4" y2="12" /><line x1="20" y1="12" x2="22" y2="12" /><line x1="5" y1="5" x2="6.5" y2="6.5" /><line x1="17.5" y1="17.5" x2="19" y2="19" /><line x1="5" y1="19" x2="6.5" y2="17.5" /><line x1="17.5" y1="6.5" x2="19" y2="5" /></svg>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>
+            )}
+          </button>
 
-        <button
-          type="button"
-          aria-label="Toggle language"
-          onClick={() => setLang((v) => (v === "ID" ? "EN" : "ID"))}
-          title="Toggle language"
-          className="icon-btn gap-1 px-2 text-xs font-semibold"
-        >
-          <Languages size={14} />
-          {lang}
-        </button>
+          <button
+            type="button"
+            title="Toggle language"
+            onClick={() => setLang((v) => (v === "ID" ? "EN" : "ID"))}
+            className="num flex h-[34px] items-center rounded-lg px-[11px] text-[12px] font-semibold"
+            style={{ border: "1px solid var(--border)", color: "var(--text)" }}
+          >
+            {lang}
+          </button>
 
-        {/* Avatar */}
-        <Link
-          href="/settings"
-          aria-label="Open profile settings"
-          className="flex items-center gap-2 rounded-xl border border-border bg-muted px-1.5 py-1 transition hover:bg-border"
-        >
-          {avatarUrl ? (
-            <Image
-              src={avatarUrl}
-              alt={name ?? "User avatar"}
-              width={30}
-              height={30}
-              className="rounded-full"
-            />
-          ) : (
-            <div className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-foreground text-xs font-bold text-card">
-              {(name ?? email ?? "U").slice(0, 1).toUpperCase()}
-            </div>
-          )}
-          <div className="hidden max-w-32 truncate pr-1 text-xs lg:block">
-            <p className="truncate font-semibold">{name ?? "8888 User"}</p>
-            <p className="truncate text-muted-foreground">{email}</p>
-          </div>
-        </Link>
-      </div>
-
-      {/* Mobile search row */}
-      <div className="mt-2 md:hidden">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-          <input
-            value={search}
-            onChange={(e) => doSearch(e.target.value)}
-            placeholder="Search transactions…"
-            className="h-9 w-full rounded-lg border border-border bg-muted pl-8 pr-3 text-sm outline-none focus:border-primary"
-          />
+          {/* Avatar */}
+          <Link href="/settings" aria-label="Open settings" className="flex h-[34px] w-[34px] items-center justify-center overflow-hidden rounded-full" style={{ background: "var(--ink)", color: "var(--panel)" }}>
+            {avatarUrl ? (
+              <Image src={avatarUrl} alt={name ?? "User"} width={34} height={34} className="rounded-full" />
+            ) : (
+              <span className="text-[12px] font-bold">{(name ?? email ?? "U").slice(0, 1).toUpperCase()}</span>
+            )}
+          </Link>
         </div>
       </div>
     </header>

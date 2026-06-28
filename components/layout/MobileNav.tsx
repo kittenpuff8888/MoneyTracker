@@ -39,7 +39,7 @@ function MobileFAB() {
     <button
       type="button"
       aria-label="Add transaction"
-      onClick={open}
+      onClick={() => open()}
       className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-30 grid h-14 w-14 place-items-center rounded-full bg-foreground text-card shadow-lg md:hidden"
     >
       <Plus size={24} />
