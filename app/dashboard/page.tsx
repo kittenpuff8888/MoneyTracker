@@ -97,14 +97,16 @@ export default async function DashboardPage({
   const rangeLengthMs = toDate.getTime() - fromDate.getTime();
   const fetchStart = format(new Date(fromDate.getTime() - 24 * 60 * 60 * 1000 - rangeLengthMs), "yyyy-MM-dd");
 
-  const [profileResult, accountsResult, transactionsResult, budgetsResult, subsResult, equityResult] =
+  const [profileResult, accountsResult, transactionsResult, budgetsResult, subsResult, equityResult, goalsResult, tradesResult] =
     await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
       supabase.from("accounts").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("transactions").select("*").eq("user_id", user.id).gte("transaction_date", fetchStart).order("transaction_date", { ascending: false }).limit(5000),
       supabase.from("budgets").select("*").eq("user_id", user.id),
       supabase.from("subscriptions").select("*").eq("user_id", user.id),
-      supabase.from("equity_assets").select("*").eq("user_id", user.id)
+      supabase.from("equity_assets").select("*").eq("user_id", user.id),
+      supabase.from("goals").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("realized_trades").select("*").eq("user_id", user.id).order("trade_date", { ascending: false }).limit(6)
     ]);
 
   const profile = profileResult.data;
@@ -114,8 +116,27 @@ export default async function DashboardPage({
   const budgets = budgetsResult.data ?? [];
   const subscriptions = subsResult.data ?? [];
   const equityAssets = equityResult.data ?? [];
+  const goals = goalsResult.data ?? [];
+  const trades = tradesResult.data ?? [];
 
   const accountName = new Map(accounts.map((a) => [a.id, a.name]));
+  const balanceOf = (accountId: string | null) => Number(accounts.find((a) => a.id === accountId)?.current_balance ?? 0);
+
+  // Goals summary — saved tracks the linked Savings wallet balance
+  const goalRows = goals.slice(0, 4).map((g) => {
+    const target = Number(g.target_amount) || 0;
+    const saved = g.wallet_id ? balanceOf(g.wallet_id) : Number(g.current_amount) || 0;
+    const pct = target > 0 ? Math.min((saved / target) * 100, 100) : 0;
+    return { id: g.id, name: g.name, category: g.category, saved, target, pct, deadline: g.deadline };
+  });
+
+  // Investments summary — recent positions/trades
+  const tradeRows = trades.slice(0, 4).map((t) => {
+    const entry = Number(t.entry_price) || 0;
+    const exit = t.exit_price == null ? null : Number(t.exit_price);
+    const retPct = !exit || entry <= 0 ? null : ((exit - entry) / entry) * 100;
+    return { id: t.id, ticker: t.ordered_item, status: t.status, entry, exit, retPct };
+  });
 
   const income = sumTransactionsInRange(transactions, "income", fromDate, toDate);
   const outcome = sumTransactionsInRange(transactions, "outcome", fromDate, toDate);
@@ -268,8 +289,83 @@ export default async function DashboardPage({
               </div>
 
               <div className="p-4" style={PANEL}>
-                <div className="mb-3.5 text-[11px] font-semibold tracking-[.07em]" style={{ color: "var(--faint)" }}>EXPENSE BREAKDOWN</div>
+                <div className="mb-3.5 flex items-center justify-between">
+                  <div className="text-[11px] font-semibold tracking-[.07em]" style={{ color: "var(--faint)" }}>EXPENSE BREAKDOWN</div>
+                  <Link href={`/expenses?from=${from}&to=${to}`} className="text-[11.5px] font-semibold" style={{ color: "var(--accent)" }}>View details ›</Link>
+                </div>
                 <SpendingBreakdownChart data={spending} />
+              </div>
+            </div>
+
+            {/* Goals + Investments summary */}
+            <div className="mb-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+              {/* Goals */}
+              <div className="p-4" style={PANEL}>
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="text-[11px] font-semibold tracking-[.07em]" style={{ color: "var(--faint)" }}>GOALS</div>
+                  <Link href="/goals" className="text-[11.5px] font-semibold" style={{ color: "var(--accent)" }}>See all ›</Link>
+                </div>
+                {goalRows.length === 0 ? (
+                  <p className="text-[12.5px]" style={{ color: "var(--muted)" }}>No goals yet. <Link href="/goals" style={{ color: "var(--accent)" }}>Add one ›</Link></p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {goalRows.map((g) => {
+                      const color = categoryColor(g.category || g.name);
+                      return (
+                        <div key={g.id} className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 flex-[0_0_32px] items-center justify-center rounded-lg text-[12px] font-bold" style={{ background: `${color}22`, color }}>{g.name.slice(0, 1).toUpperCase()}</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="truncate text-[13px] font-semibold">{g.name}</span>
+                              <span className="num shrink-0 text-[11.5px]" style={{ color: "var(--muted)" }}>{formatIDR(g.saved)} / {formatIDR(g.target)}</span>
+                            </div>
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <div className="h-1.5 flex-1 overflow-hidden rounded-full" style={{ background: "var(--soft)" }}>
+                                <div className="h-full rounded-full" style={{ width: `${g.pct}%`, background: color }} />
+                              </div>
+                              <span className="num w-11 text-right text-[11px] font-semibold" style={{ color }}>{g.pct.toFixed(0)}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Investments */}
+              <div className="p-4" style={PANEL}>
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="text-[11px] font-semibold tracking-[.07em]" style={{ color: "var(--faint)" }}>INVESTMENTS</div>
+                  <Link href="/equity" className="text-[11.5px] font-semibold" style={{ color: "var(--accent)" }}>See all ›</Link>
+                </div>
+                {tradeRows.length === 0 ? (
+                  <p className="text-[12.5px]" style={{ color: "var(--muted)" }}>No trades yet. <Link href="/equity" style={{ color: "var(--accent)" }}>Add one ›</Link></p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {tradeRows.map((t) => (
+                      <div key={t.id} className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 flex-[0_0_32px] items-center justify-center rounded-full text-[10px] font-bold" style={{ background: "var(--ink)", color: "var(--panel)" }}>{t.ticker.slice(0, 2)}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="num truncate text-[13px] font-bold">{t.ticker}</span>
+                            <span className="num shrink-0 text-[12.5px] font-semibold">{t.exit == null ? formatIDR(t.entry) : formatIDR(t.exit)}</span>
+                          </div>
+                          <div className="mt-0.5 flex items-center justify-between gap-2">
+                            <span className="text-[11px]" style={{ color: "var(--muted)" }}>
+                              {t.status === "open" ? "Open · entry " : "Realized · entry "}<span className="num">{formatIDR(t.entry)}</span>
+                            </span>
+                            {t.retPct == null ? (
+                              <span className="num rounded-[5px] px-1.5 py-0.5 text-[10.5px] font-bold" style={{ background: "var(--warnSoft)", color: "var(--warn)" }}>OPEN</span>
+                            ) : (
+                              <span className="num rounded-[5px] px-1.5 py-0.5 text-[10.5px] font-bold" style={{ background: t.retPct >= 0 ? "var(--upSoft)" : "var(--downSoft)", color: t.retPct >= 0 ? "var(--up)" : "var(--down)" }}>{t.retPct >= 0 ? "+" : ""}{t.retPct.toFixed(1)}%</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
