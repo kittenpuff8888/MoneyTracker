@@ -21,7 +21,8 @@ export async function upsertAccount(input: unknown) {
     name: parsed.name,
     type: parsed.type,
     color: parsed.color || "#38bdf8",
-    icon: parsed.icon || "wallet"
+    icon: parsed.icon || "wallet",
+    card_info: parsed.card_info ?? null
   };
 
   const query = parsed.id

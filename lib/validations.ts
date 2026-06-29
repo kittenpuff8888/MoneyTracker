@@ -9,7 +9,8 @@ export const accountSchema = z.object({
   starting_balance: z.coerce.number().min(0),
   current_balance: z.coerce.number().min(0),
   color: z.string().optional().nullable(),
-  icon: z.string().optional().nullable()
+  icon: z.string().optional().nullable(),
+  card_info: z.string().max(200).optional().nullable()
 });
 
 export const transactionSchema = z

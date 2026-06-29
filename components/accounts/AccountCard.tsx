@@ -41,6 +41,10 @@ export function AccountCard({
         </div>
       </div>
 
+      {account.card_info && (
+        <div className="mb-2.5 truncate text-[11px] tracking-[.06em]" style={{ color: "var(--muted)" }}>{account.card_info}</div>
+      )}
+
       <div className="mb-3">
         <div className="mb-[3px] text-[9.5px]" style={{ color: "var(--faint)" }}>BALANCE</div>
         <div className="num-balance num text-[21px] font-semibold leading-none">{compact(balance)}</div>

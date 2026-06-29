@@ -23,7 +23,8 @@ function defaults(account?: Account | null): AccountFormValues {
     starting_balance: account?.starting_balance ?? 0,
     current_balance: account?.current_balance ?? 0,
     color: account?.color ?? "#2563eb",
-    icon: account?.icon ?? "wallet"
+    icon: account?.icon ?? "wallet",
+    card_info: account?.card_info ?? ""
   };
 }
 
@@ -80,6 +81,12 @@ export function AccountForm({ account, onSaved }: { account?: Account | null; on
           <span className="num text-[13px]" style={{ color: "var(--muted)" }}>Rp</span>
           <input type="number" min="0" step="any" inputMode="numeric" placeholder="0" disabled={isEdit} {...register("current_balance")} className="num w-full border-none bg-transparent text-[13px] outline-none disabled:opacity-60" style={{ color: "var(--text)" }} />
         </div>
+      </div>
+
+      {/* Card Info */}
+      <div className="mb-4">
+        <div className={lbl}>Card Info <span style={{ color: "var(--faint)", fontWeight: 400 }}>(optional — card number, notes, etc.)</span></div>
+        <input placeholder="e.g. 1234 5678 9012 3456" {...register("card_info")} className={fieldCls} style={fieldStyle} />
       </div>
 
       {/* Color */}

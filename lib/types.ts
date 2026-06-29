@@ -64,6 +64,7 @@ export type Account = {
   current_balance: number;
   color: string | null;
   icon: string | null;
+  card_info: string | null;
   created_at: string;
 };
 

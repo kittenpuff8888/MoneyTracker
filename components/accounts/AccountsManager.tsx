@@ -67,16 +67,16 @@ export function AccountsManager({
         </button>
       </div>
 
-      {/* Ink summary bar */}
-      <div className="mb-[18px] flex flex-wrap items-center justify-between gap-4 px-5 py-[18px]" style={{ background: "var(--ink)", color: "var(--panel)", borderRadius: "var(--r)" }}>
+      {/* Summary bar */}
+      <div className="mb-[18px] flex flex-wrap items-center justify-between gap-4 px-5 py-[18px]" style={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: "var(--r)", boxShadow: "var(--sh)" }}>
         <div>
-          <div className="mb-[7px] text-[11px] font-semibold tracking-[.07em] opacity-60">TOTAL BALANCE · ALL WALLETS</div>
+          <div className="mb-[7px] text-[11px] font-semibold tracking-[.07em]" style={{ color: "var(--faint)" }}>TOTAL BALANCE · ALL WALLETS</div>
           <div className="num-balance num text-[30px] font-semibold leading-none">{formatIDR(totalBalance)}</div>
         </div>
         <div className="flex gap-[26px]">
-          <div><div className="mb-1 text-[10.5px] opacity-60">INCOME</div><div className="num text-[16px] font-semibold" style={{ color: "#9ec1ff" }}>{compact(totalIncome)}</div></div>
-          <div><div className="mb-1 text-[10.5px] opacity-60">EXPENSE</div><div className="num text-[16px] font-semibold" style={{ color: "#ff9b9e" }}>{compact(totalExpense)}</div></div>
-          <div><div className="mb-1 text-[10.5px] opacity-60">WALLETS</div><div className="num text-[16px] font-semibold">{accounts.length}</div></div>
+          <div><div className="mb-1 text-[10.5px]" style={{ color: "var(--faint)" }}>INCOME</div><div className="num text-[16px] font-semibold" style={{ color: "var(--up)" }}>{compact(totalIncome)}</div></div>
+          <div><div className="mb-1 text-[10.5px]" style={{ color: "var(--faint)" }}>EXPENSE</div><div className="num text-[16px] font-semibold" style={{ color: "var(--down)" }}>{compact(totalExpense)}</div></div>
+          <div><div className="mb-1 text-[10.5px]" style={{ color: "var(--faint)" }}>WALLETS</div><div className="num text-[16px] font-semibold">{accounts.length}</div></div>
         </div>
       </div>
 
