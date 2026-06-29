@@ -69,8 +69,7 @@ export function InvestmentManager({ wallets, trades }: { wallets: Account[]; tra
         <button
           type="button"
           onClick={() => setOpen(true)}
-          disabled={wallets.length === 0}
-          className="flex items-center gap-[7px] rounded-[10px] px-[14px] py-[9px] text-[12.5px] font-semibold transition hover:opacity-90 disabled:opacity-50"
+          className="flex items-center gap-[7px] rounded-[10px] px-[14px] py-[9px] text-[12.5px] font-semibold transition hover:opacity-90"
           style={{ background: "var(--ink)", color: "var(--panel)" }}
         >
           + Add Trade
@@ -213,6 +212,7 @@ function TradeModal({ wallets, onClose }: { wallets: Account[]; onClose: () => v
   const isRealized = status === "realized";
   const previewPnl = isRealized ? exit - entry - fee : 0;
   const previewPct = isRealized && entry > 0 ? ((exit - entry) / entry) * 100 : 0;
+  const noWallet = wallets.length === 0;
 
   function onSubmit(values: TradeValues) {
     startTransition(async () => {
@@ -238,6 +238,12 @@ function TradeModal({ wallets, onClose }: { wallets: Account[]; onClose: () => v
         </div>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="px-[22px] py-5">
+            {noWallet ? (
+              <div className="rounded-[12px] p-3.5 text-[13px]" style={{ background: "var(--warnSoft)", color: "var(--warn)" }}>
+                You have no Investment wallet yet. Create a wallet of type <strong>Investment</strong> on the Wallet page first, then add a trade linked to it.
+              </div>
+            ) : (
+              <>
             <div className="mb-3.5 grid grid-cols-2 gap-3">
               <div>
                 <div className={lbl}>Ticker</div>
@@ -299,10 +305,12 @@ function TradeModal({ wallets, onClose }: { wallets: Account[]; onClose: () => v
               <div className={lbl}>Date</div>
               <input type="date" {...register("trade_date")} className={`num ${fieldCls}`} style={fieldStyle} />
             </div>
+              </>
+            )}
           </div>
           <div className="flex items-center justify-end gap-2.5 px-[22px] py-4" style={{ borderTop: "1px solid var(--hair)" }}>
             <button type="button" onClick={onClose} className="rounded-[10px] px-[18px] py-2.5 text-[13px] font-semibold" style={{ border: "1px solid var(--border)", color: "var(--muted)" }}>Cancel</button>
-            <button type="submit" disabled={pending} className="rounded-[10px] px-5 py-2.5 text-[13px] font-semibold transition hover:opacity-90 disabled:opacity-50" style={{ background: "var(--ink)", color: "var(--panel)" }}>
+            <button type="submit" disabled={pending || noWallet} className="rounded-[10px] px-5 py-2.5 text-[13px] font-semibold transition hover:opacity-90 disabled:opacity-50" style={{ background: "var(--ink)", color: "var(--panel)" }}>
               {pending ? "Saving…" : isRealized ? "Save Trade" : "Save Position"}
             </button>
           </div>

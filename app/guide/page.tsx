@@ -8,42 +8,52 @@ const sections = [
   {
     n: "1",
     title: "Add your wallets first",
-    body: "Go to Wallet → Add Wallet. Create one entry for every place your money lives — bank accounts, e-wallets (GoPay, OVO), cash, and Investment wallets. The starting balance you enter becomes your baseline; every transaction adjusts it automatically."
+    body: "Go to Wallet → Add Wallet and create one entry for every place your money lives — bank accounts, e-wallets (GoPay, OVO), cash, plus Savings and Investment wallets. The type matters: Savings wallets power your Goals and Investment wallets power your Portfolio. The balance you enter becomes the baseline; every transaction adjusts it automatically."
   },
   {
     n: "2",
     title: "Record transactions",
-    body: "Use the Add Transaction button in the sidebar (or the + on mobile). Pick Expense, Income, or Move Money, choose the wallet and category, and save. Move Money transfers between two of your own wallets without counting as income or expense."
+    body: "Use the Add Transaction button in the sidebar (or the + on mobile). Pick Expense, Income, or Move Money, choose the wallet, category and payment method, then save. Move Money transfers between two of your own wallets without counting as income or expense."
   },
   {
     n: "3",
-    title: "Read your Dashboard",
-    body: "Net Balance is cumulative across all wallets and never changes with the date range. Income, Expense, Savings Ratio and the charts DO follow the date range you pick in the top bar. The AI Insights panel summarises your money flow and flags budgets that are running hot."
+    title: "Set your pay day",
+    body: "In Settings → Salary / pay day, enter the day your salary lands (e.g. 25). The dashboard's default range and the “This month” preset then run from your most recent pay day to today — so your figures match your real pay cycle, not the calendar month."
   },
   {
     n: "4",
-    title: "Set budgets",
-    body: "On Budgets, add a monthly limit per category. Cards turn from On-track → Tight → Over as you spend, and the dashboard surfaces any budget above 75% inside AI Insights."
+    title: "Read your Dashboard",
+    body: "Net Balance is cumulative across all wallets and never changes with the date range. Income, Expense, Savings Ratio and the charts follow the range you pick in the top bar. You also get AI Insights, an Income-vs-Expense chart, an Expense Breakdown (click “View details” for a full expenses page), and Goals + Investments summaries."
   },
   {
     n: "5",
-    title: "Track investments",
-    body: "On Investment Portfolio, add an Open position with just a ticker and entry price. When you close it, edit it to Realized and enter the exit price and fee — P&L and return % are calculated for you, and your Investment wallet balance updates."
+    title: "Set budgets",
+    body: "On Budgets, add a monthly limit per category. Cards move from On-track → Tight → Over as you spend, and the dashboard flags any budget above 75% inside AI Insights."
   },
   {
     n: "6",
-    title: "Manage categories",
-    body: "Settings → Categories lets you add, rename, or remove the categories that appear in every dropdown. New categories are available immediately across Transactions and Budgets."
+    title: "Track goals",
+    body: "On Goals, first create a Savings wallet, then add a goal linked to it. The goal's progress automatically tracks that wallet's live balance against your target — top up the wallet and the goal fills up. Each card shows progress, remaining, start and target dates."
   },
   {
     n: "7",
-    title: "Automated reports",
-    body: "In Settings → Report Schedule, enable an automated email summary (daily, weekly, or monthly). The report includes your income/expense totals and AI-generated insights about your money flow, delivered to your account email."
+    title: "Track investments",
+    body: "On Investment Portfolio, create an Investment wallet, then add a position. Add it as Open with just a ticker and entry price; when you close it, set it to Realized and enter the exit price and fee — P&L and return % are calculated for you and the wallet balance updates. The banner shows total realized P&L, cumulative return and win rate."
   },
   {
     n: "8",
-    title: "Privacy controls",
-    body: "Use the eye icon in the top bar to mask all balances (handy in public). The theme toggle switches light/dark, and the calendar sets the date range that drives every figure on the page."
+    title: "Manage categories",
+    body: "Settings → Categories lets you add, rename, or remove the categories used in every dropdown. New users start with a curated default list; changes apply immediately across Transactions, Budgets and Goals."
+  },
+  {
+    n: "9",
+    title: "Automated reports",
+    body: "In Settings → Report Schedule, enable an emailed summary (daily, weekly, or monthly). The report includes your income/expense totals plus AI-generated insights about your money flow, sent to your account email."
+  },
+  {
+    n: "10",
+    title: "Privacy & display",
+    body: "The eye icon in the top bar masks every balance with dots (handy in public). The theme toggle switches light/dark, and the calendar sets the date range that drives every figure on the page."
   }
 ];
 
