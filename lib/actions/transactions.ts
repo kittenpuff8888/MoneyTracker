@@ -31,13 +31,10 @@ export async function upsertTransaction(input: unknown) {
 
   if (error) throw new Error(error.message);
 
-  // Patch the name/merchant field separately (not in RPC signature).
+  // Patch the name/merchant field via a definer RPC (authenticated has no
+  // direct UPDATE grant on transactions — balance writes go through RPCs).
   if (txId && parsed.name !== undefined) {
-    await supabase
-      .from("transactions")
-      .update({ name: parsed.name ?? null })
-      .eq("id", txId)
-      .eq("user_id", user.id);
+    await supabase.rpc("set_transaction_name", { p_id: txId, p_name: parsed.name ?? null });
   }
 
   revalidatePath("/transactions");

@@ -345,6 +345,10 @@ export type Database = {
         Args: { p_id: string };
         Returns: void;
       };
+      set_transaction_name: {
+        Args: { p_id: string; p_name: string | null };
+        Returns: void;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
