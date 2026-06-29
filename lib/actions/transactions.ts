@@ -15,6 +15,8 @@ export async function upsertTransaction(input: unknown) {
   const parsed = transactionSchema.parse(input);
   const { supabase, user } = await requireUser();
 
+  const category = parsed.type === "covering" ? "Financial" : (parsed.category ?? "Miscellaneous");
+
   // apply_transaction handles balance updates; returns the transaction id.
   const { data: txId, error } = await supabase.rpc("apply_transaction", {
     p_transaction_id: parsed.id ?? null,
@@ -22,7 +24,7 @@ export async function upsertTransaction(input: unknown) {
     p_type: parsed.type,
     p_amount: parsed.amount,
     p_fee: parsed.fee ?? 0,
-    p_category: parsed.category,
+    p_category: category,
     p_from_account_id: parsed.from_account_id ?? null,
     p_to_account_id: parsed.to_account_id ?? null,
     p_transaction_date: parsed.transaction_date,
@@ -31,12 +33,28 @@ export async function upsertTransaction(input: unknown) {
 
   if (error) throw new Error(error.message);
 
-  // Patch the name/merchant field via a definer RPC (authenticated has no
-  // direct UPDATE grant on transactions — balance writes go through RPCs).
+  // Patch the name/merchant field via a definer RPC.
   if (txId && parsed.name !== undefined) {
     await supabase.rpc("set_transaction_name", { p_id: txId, p_name: parsed.name ?? null });
   }
 
+  // Patch covered_for for covering transactions.
+  if (txId && parsed.type === "covering" && parsed.covered_for !== undefined) {
+    await supabase.rpc("set_covering_info", { p_id: txId, p_covered_for: parsed.covered_for ?? null });
+  }
+
+  revalidatePath("/transactions");
+  revalidatePath("/dashboard");
+  revalidatePath("/accounts");
+}
+
+export async function settleCovering(id: string) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase.rpc("settle_covering_transaction", {
+    p_id: id,
+    p_user_id: user.id
+  });
+  if (error) throw new Error(error.message);
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
   revalidatePath("/accounts");

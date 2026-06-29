@@ -15,8 +15,9 @@ export function categoryColor(name: string | null | undefined): string {
 
 export type TxTypeMeta = { label: string; up: boolean; move: boolean };
 
-export function txTypeMeta(type: "income" | "outcome" | "transfer"): TxTypeMeta {
+export function txTypeMeta(type: string): TxTypeMeta {
   if (type === "income") return { label: "Income", up: true, move: false };
   if (type === "transfer") return { label: "Move Money", up: false, move: true };
+  if (type === "covering") return { label: "Cover Bill", up: false, move: true };
   return { label: "Expense", up: false, move: false };
 }

@@ -16,15 +16,16 @@ export const accountSchema = z.object({
 export const transactionSchema = z
   .object({
     id: z.string().uuid().optional(),
-    type: z.enum(["income", "outcome", "transfer"]),
+    type: z.enum(["income", "outcome", "transfer", "covering"]),
     name: z.string().max(80).optional().nullable(),
     amount: z.coerce.number().positive("Amount must be greater than 0"),
     fee: z.coerce.number().min(0, "Fee cannot be negative").default(0),
-    category: z.string().min(1, "Category is required"),
+    category: z.string().min(1, "Category is required").optional().nullable(),
     from_account_id: optionalUuid,
     to_account_id: optionalUuid,
     transaction_date: z.string().min(1, "Transaction date is required"),
-    notes: z.string().optional().nullable()
+    notes: z.string().optional().nullable(),
+    covered_for: z.string().max(100).optional().nullable()
   })
   .superRefine((value, ctx) => {
     if (value.type === "income" && !value.to_account_id) {
@@ -32,6 +33,14 @@ export const transactionSchema = z
     }
     if (value.type === "outcome" && !value.from_account_id) {
       ctx.addIssue({ code: "custom", path: ["from_account_id"], message: "Outcome requires a source account" });
+    }
+    if (value.type === "covering") {
+      if (!value.from_account_id) {
+        ctx.addIssue({ code: "custom", path: ["from_account_id"], message: "Covering requires a source wallet" });
+      }
+      if (!value.covered_for || value.covered_for.trim() === "") {
+        ctx.addIssue({ code: "custom", path: ["covered_for"], message: "Enter who you're covering for" });
+      }
     }
     if (value.type === "transfer") {
       if (!value.from_account_id) {

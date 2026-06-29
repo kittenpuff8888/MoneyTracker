@@ -1,6 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type TransactionType = "income" | "outcome" | "transfer";
+export type TransactionType = "income" | "outcome" | "transfer" | "covering";
 export type AccountType =
   | "Bank"
   | "Cash"
@@ -79,6 +79,8 @@ export type Transaction = {
   from_account_id: string | null;
   to_account_id: string | null;
   notes: string | null;
+  covered_for: string | null;
+  is_settled: boolean;
   transaction_date: string;
   created_at: string;
 };

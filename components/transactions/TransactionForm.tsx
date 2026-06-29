@@ -42,7 +42,8 @@ export function TransactionForm({
       from_account_id: transaction?.from_account_id ?? "",
       to_account_id: transaction?.to_account_id ?? "",
       transaction_date: transaction?.transaction_date ?? new Date().toISOString().slice(0, 10),
-      notes: transaction?.notes ?? ""
+      notes: transaction?.notes ?? "",
+      covered_for: (transaction as any)?.covered_for ?? ""
     }
   });
 
@@ -57,12 +58,14 @@ export function TransactionForm({
       from_account_id: transaction?.from_account_id ?? "",
       to_account_id: transaction?.to_account_id ?? "",
       transaction_date: transaction?.transaction_date ?? new Date().toISOString().slice(0, 10),
-      notes: transaction?.notes ?? ""
+      notes: transaction?.notes ?? "",
+      covered_for: (transaction as any)?.covered_for ?? ""
     });
   }, [transaction, reset]);
 
   const type = useWatch({ control, name: "type" });
 
+  const isCovering = type === "covering";
   const feeLabel =
     type === "income" ? "Fee (deducted from deposit)"
     : type === "transfer" ? "Transfer Fee"
@@ -81,7 +84,8 @@ export function TransactionForm({
           from_account_id: "",
           to_account_id: "",
           transaction_date: new Date().toISOString().slice(0, 10),
-          notes: ""
+          notes: "",
+          covered_for: ""
         });
         onSaved?.();
         toast.success(transaction ? "Transaction updated." : "Transaction added.");
@@ -96,8 +100,8 @@ export function TransactionForm({
       {/* Type segmented control */}
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</p>
-        <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
-          {(["outcome", "income", "transfer"] as const).map((t) => (
+        <div className="grid grid-cols-4 gap-1 rounded-xl bg-muted p-1">
+          {(["outcome", "income", "transfer", "covering"] as const).map((t) => (
             <label
               key={t}
               className={cn(
@@ -108,16 +112,21 @@ export function TransactionForm({
               )}
             >
               <input type="radio" {...register("type")} value={t} className="sr-only" />
-              {t === "outcome" ? "Expense" : t === "income" ? "Income" : "Move Money"}
+              {t === "outcome" ? "Expense" : t === "income" ? "Income" : t === "transfer" ? "Move" : "Cover Bill"}
             </label>
           ))}
         </div>
+        {isCovering && (
+          <p className="mt-2 text-[11px]" style={{ color: "var(--muted)" }}>
+            Money leaves your wallet but is tracked as a receivable — not counted as an expense. Mark settled when they pay back.
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="grid gap-1 text-sm font-medium">
-          Name / Merchant
-          <Input placeholder="e.g. Grab, Indomaret…" {...register("name")} />
+          {isCovering ? "What for (merchant / description)" : "Name / Merchant"}
+          <Input placeholder={isCovering ? "e.g. Dinner at Sushi Tei" : "e.g. Grab, Indomaret…"} {...register("name")} />
         </label>
         <label className="grid gap-1 text-sm font-medium">
           Amount (Rp)
@@ -126,8 +135,16 @@ export function TransactionForm({
         </label>
       </div>
 
+      {isCovering && (
+        <label className="grid gap-1 text-sm font-medium">
+          Covered for (who)
+          <Input placeholder="e.g. Budi, Family trip, Office team" {...register("covered_for")} />
+          {errors.covered_for && <span className="text-xs text-danger">{errors.covered_for.message}</span>}
+        </label>
+      )}
+
       <div className="grid gap-4 md:grid-cols-3">
-        {type !== "transfer" && (
+        {type !== "transfer" && !isCovering && (
           <label className="grid gap-1 text-sm font-medium">
             Category
             <Select {...register("category")}>
@@ -148,21 +165,23 @@ export function TransactionForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="grid gap-1 text-sm font-medium">
-          From Wallet
+          {isCovering ? "Paid from wallet" : "From Wallet"}
           <Select {...register("from_account_id")} disabled={type === "income"}>
             <option value="">Select wallet</option>
             {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </Select>
           {errors.from_account_id && <span className="text-xs text-danger">{errors.from_account_id.message}</span>}
         </label>
-        <label className="grid gap-1 text-sm font-medium">
-          To Wallet
-          <Select {...register("to_account_id")} disabled={type === "outcome"}>
-            <option value="">Select wallet</option>
-            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </Select>
-          {errors.to_account_id && <span className="text-xs text-danger">{errors.to_account_id.message}</span>}
-        </label>
+        {!isCovering && (
+          <label className="grid gap-1 text-sm font-medium">
+            To Wallet
+            <Select {...register("to_account_id")} disabled={type === "outcome"}>
+              <option value="">Select wallet</option>
+              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </Select>
+            {errors.to_account_id && <span className="text-xs text-danger">{errors.to_account_id.message}</span>}
+          </label>
+        )}
       </div>
 
       <label className="grid gap-1 text-sm font-medium">
