@@ -354,6 +354,20 @@ export type Database = {
         };
         Returns: void;
       };
+      set_covering_info: {
+        Args: {
+          p_id: string;
+          p_covered_for: string | null;
+        };
+        Returns: void;
+      };
+      settle_covering_transaction: {
+        Args: {
+          p_id: string;
+          p_user_id: string;
+        };
+        Returns: void;
+      };
       delete_goal: {
         Args: { p_id: string };
         Returns: void;
