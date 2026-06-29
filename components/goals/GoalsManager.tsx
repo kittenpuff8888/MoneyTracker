@@ -94,7 +94,10 @@ export function GoalsManager({
                   <span className="num rounded-[6px] px-2 py-[3px] text-[10.5px] font-bold" style={{ background: tag.bg, color: tag.color }}>{tag.label}</span>
                 </div>
 
-                <div className="mb-3 text-[15px] font-bold">{g.name}</div>
+                <div className="mb-1 text-[15px] font-bold">{g.name}</div>
+                {g.description && (
+                  <p className="mb-3 text-[12px] leading-[1.5]" style={{ color: "var(--muted)" }}>{g.description}</p>
+                )}
 
                 <div className="mb-1.5 flex items-center justify-between text-[12px]">
                   <span style={{ color: "var(--muted)" }}>{Math.round(pct)}%</span>
@@ -173,6 +176,7 @@ function GoalModal({
       name: goal?.name ?? "",
       wallet_id: goal?.wallet_id ?? savingsAccounts[0]?.id ?? "",
       category: goal?.category ?? (categories[0] ?? ""),
+      description: goal?.description ?? "",
       target_amount: goal ? Number(goal.target_amount) : 0,
       start_date: goal?.start_date ?? today,
       deadline: goal?.deadline ?? ""
@@ -241,6 +245,11 @@ function GoalModal({
                     <input type="number" min="0" step="any" inputMode="numeric" placeholder="5000000" {...register("target_amount")} className="num w-full border-none bg-transparent text-[13px] outline-none" style={{ color: "var(--text)" }} />
                   </div>
                   {errors.target_amount && <span className="text-[11px]" style={{ color: "var(--down)" }}>{errors.target_amount.message}</span>}
+                </div>
+
+                <div className="mb-3.5">
+                  <div className={lbl}>Description <span style={{ color: "var(--faint)", fontWeight: 400 }}>(optional)</span></div>
+                  <textarea placeholder="What is this goal for?" rows={2} {...register("description")} className={fieldCls} style={{ ...fieldStyle, resize: "vertical" }} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

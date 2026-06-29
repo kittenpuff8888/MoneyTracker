@@ -5,7 +5,7 @@ import { LoginButton } from "@/components/auth/LoginButton";
 import { createClient } from "@/lib/supabase/server";
 
 type HomePageProps = {
-  searchParams: Promise<{ auth_error?: string }>;
+  searchParams: Promise<{ auth_error?: string; code?: string; next?: string }>;
 };
 
 const authErrors: Record<string, string> = {
@@ -18,7 +18,17 @@ const authErrors: Record<string, string> = {
 const PANEL = { background: "var(--panel)", border: "1px solid var(--border)", borderRadius: "var(--r)", boxShadow: "var(--sh)" } as const;
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const { auth_error: authError } = await searchParams;
+  const { auth_error: authError, code, next } = await searchParams;
+
+  // OAuth providers sometimes deliver the auth code to the site root ("/")
+  // instead of "/auth/callback" (Supabase Site URL fallback). Forward it to the
+  // callback handler so the code is always exchanged and never left in the URL.
+  if (code) {
+    const params = new URLSearchParams({ code });
+    if (next && next.startsWith("/") && !next.startsWith("//")) params.set("next", next);
+    redirect(`/auth/callback?${params.toString()}`);
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user) redirect("/dashboard");

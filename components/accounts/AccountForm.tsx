@@ -76,10 +76,12 @@ export function AccountForm({ account, onSaved }: { account?: Account | null; on
       </div>
 
       <div className="mb-4">
-        <div className={lbl}>Current balance {!isEdit && <span style={{ color: "var(--faint)", fontWeight: 400 }}>(any value — not rounded)</span>}</div>
+        <div className={lbl}>Current balance {isEdit
+          ? <span style={{ color: "var(--faint)", fontWeight: 400 }}>(changes are logged as a Miscellaneous transaction)</span>
+          : <span style={{ color: "var(--faint)", fontWeight: 400 }}>(any value — not rounded)</span>}</div>
         <div className="flex items-center gap-2 rounded-[10px] px-[11px] py-[10px]" style={fieldStyle}>
           <span className="num text-[13px]" style={{ color: "var(--muted)" }}>Rp</span>
-          <input type="number" min="0" step="any" inputMode="numeric" placeholder="0" disabled={isEdit} {...register("current_balance")} className="num w-full border-none bg-transparent text-[13px] outline-none disabled:opacity-60" style={{ color: "var(--text)" }} />
+          <input type="number" min="0" step="any" inputMode="numeric" placeholder="0" {...register("current_balance")} className="num w-full border-none bg-transparent text-[13px] outline-none" style={{ color: "var(--text)" }} />
         </div>
       </div>
 

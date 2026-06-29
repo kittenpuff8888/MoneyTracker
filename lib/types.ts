@@ -149,6 +149,7 @@ export type Goal = {
   current_amount: number;
   wallet_id: string | null;
   category: string | null;
+  description: string | null;
   start_date: string | null;
   deadline: string | null;
   created_at: string;
@@ -341,8 +342,17 @@ export type Database = {
           p_target: number;
           p_start: string | null;
           p_deadline: string | null;
+          p_description?: string | null;
         };
         Returns: string;
+      };
+      adjust_account_balance: {
+        Args: {
+          p_account_id: string;
+          p_new_balance: number;
+          p_user_id: string;
+        };
+        Returns: void;
       };
       delete_goal: {
         Args: { p_id: string };

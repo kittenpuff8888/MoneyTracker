@@ -55,7 +55,12 @@ export const transactionSchema = z
     }
   });
 
-const optionalDate = z.string().optional().nullable().or(z.literal("").transform(() => null));
+// Empty string is a valid `z.string()`, so `.or(z.literal(""))` never triggers.
+// Normalize "", whitespace, null, and undefined all to null so empty optional
+// date inputs are not sent as "" to a Postgres `date` column.
+const optionalDate = z
+  .union([z.string(), z.null(), z.undefined()])
+  .transform((v) => (typeof v === "string" && v.trim() !== "" ? v : null));
 
 export const budgetSchema = z.object({
   id: z.string().uuid().optional(),
@@ -116,6 +121,7 @@ export const goalSchema = z.object({
   name: z.string().min(1, "Goal name is required").max(60),
   wallet_id: z.string().uuid({ message: "Select a savings wallet" }),
   category: z.string().optional().nullable(),
+  description: z.string().max(300).optional().nullable(),
   target_amount: z.coerce.number().positive("Target must be greater than 0"),
   start_date: optionalDate,
   deadline: optionalDate

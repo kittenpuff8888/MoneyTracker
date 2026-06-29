@@ -24,7 +24,8 @@ export async function upsertGoal(input: unknown) {
     p_category: p.category ?? null,
     p_target: p.target_amount,
     p_start: p.start_date ?? null,
-    p_deadline: p.deadline ?? null
+    p_deadline: p.deadline ?? null,
+    p_description: p.description ?? null
   });
   if (error) throw new Error(error.message);
   revalidatePath("/goals");

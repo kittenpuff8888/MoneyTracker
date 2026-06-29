@@ -36,6 +36,19 @@ export async function upsertAccount(input: unknown) {
 
   const { error } = await query;
   if (error) throw new Error(error.message);
+
+  // On edit, if the balance was changed, record the +/- difference as a
+  // Miscellaneous transaction and update the balance atomically via RPC.
+  if (parsed.id) {
+    const { error: adjustError } = await supabase.rpc("adjust_account_balance", {
+      p_account_id: parsed.id,
+      p_new_balance: parsed.current_balance,
+      p_user_id: user.id
+    });
+    if (adjustError) throw new Error(adjustError.message);
+    revalidatePath("/transactions");
+  }
+
   revalidatePath("/accounts");
   revalidatePath("/dashboard");
 }
