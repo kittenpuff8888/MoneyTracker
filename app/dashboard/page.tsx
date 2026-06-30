@@ -27,7 +27,7 @@ import {
 } from "@/lib/calculations";
 import { generateBudgetInsightFromData } from "@/lib/ai";
 import { formatIDR, formatPercent } from "@/lib/formatters";
-import { categoryColor, txTypeMeta } from "@/lib/category-colors";
+import { amountStyle, categoryColor, txTypeMeta } from "@/lib/category-colors";
 import { createClient } from "@/lib/supabase/server";
 import type { Transaction } from "@/lib/types";
 
@@ -407,7 +407,7 @@ export default async function DashboardPage({
                           <td className="px-2 py-[11px]"><span className="inline-flex items-center gap-1.5 rounded-full px-[9px] py-[3px] text-[11px] font-semibold" style={{ background: `${cc}1f`, color: cc }}>{t.category}</span></td>
                           <td className="px-2 py-[11px] text-[12.5px]" style={{ color: "var(--muted)" }}>{wallet}</td>
                           <td className="num px-2 py-[11px] text-right text-[11.5px]" style={{ color: "var(--faint)" }}>{t.fee > 0 ? formatIDR(t.fee).replace("Rp", "").trim() : "—"}</td>
-                          <td className="num px-2 py-[11px] pr-[18px] text-right text-[13px] font-semibold" style={{ color: meta.up ? "var(--up)" : "var(--text)" }}>{meta.up ? "+" : "−"}{formatIDR(t.amount)}</td>
+                          <td className="num px-2 py-[11px] pr-[18px] text-right text-[13px] font-semibold" style={{ color: amountStyle(t.type).color }}>{amountStyle(t.type).sign}{formatIDR(t.amount)}</td>
                         </tr>
                       );
                     })}

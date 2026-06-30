@@ -21,3 +21,13 @@ export function txTypeMeta(type: string): TxTypeMeta {
   if (type === "covering") return { label: "Cover Bill", up: false, move: true };
   return { label: "Expense", up: false, move: false };
 }
+
+// Sign + color for a transaction amount, per spec:
+//   income  → "+" blue · outcome → "−" red · transfer → no sign, plain black
+//   covering (loan) → "−" amber
+export function amountStyle(type: string): { sign: string; color: string } {
+  if (type === "income") return { sign: "+", color: "var(--accent)" };
+  if (type === "outcome") return { sign: "−", color: "var(--down)" };
+  if (type === "covering") return { sign: "−", color: "#f59e0b" };
+  return { sign: "", color: "var(--text)" };
+}

@@ -25,7 +25,10 @@ export const transactionSchema = z
     to_account_id: optionalUuid,
     transaction_date: z.string().min(1, "Transaction date is required"),
     notes: z.string().optional().nullable(),
-    covered_for: z.string().max(100).optional().nullable()
+    covered_for: z.string().max(100).optional().nullable(),
+    // Cover Bill: amount = total paid; my_expense = the portion that is mine.
+    // The remainder (amount - my_expense) is the reimbursable loan.
+    my_expense: z.coerce.number().min(0).optional().nullable()
   })
   .superRefine((value, ctx) => {
     if (value.type === "income" && !value.to_account_id) {
@@ -40,6 +43,9 @@ export const transactionSchema = z
       }
       if (!value.covered_for || value.covered_for.trim() === "") {
         ctx.addIssue({ code: "custom", path: ["covered_for"], message: "Enter who you're covering for" });
+      }
+      if ((value.my_expense ?? 0) > value.amount) {
+        ctx.addIssue({ code: "custom", path: ["my_expense"], message: "Your share can't exceed the total" });
       }
     }
     if (value.type === "transfer") {

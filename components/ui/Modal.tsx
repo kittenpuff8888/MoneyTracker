@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 
 export function Modal({
@@ -26,15 +26,20 @@ export function Modal({
     };
   }, [open, onClose]);
 
+  // Only close when a click both STARTS and ENDS on the backdrop. This prevents
+  // the modal from closing when the user selects text inside a field and the
+  // mouse happens to release over the backdrop.
+  const pressedBackdrop = useRef(false);
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center p-4">
-      <button
-        type="button"
-        aria-label="Close"
+      <div
+        aria-hidden
         className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
-        onClick={onClose}
+        onMouseDown={(e) => { pressedBackdrop.current = e.target === e.currentTarget; }}
+        onMouseUp={(e) => { if (pressedBackdrop.current && e.target === e.currentTarget) onClose(); pressedBackdrop.current = false; }}
       />
       <div
         role="dialog"

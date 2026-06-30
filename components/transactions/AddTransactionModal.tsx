@@ -1,9 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { QuickTransactionForm } from "@/components/transactions/QuickTransactionForm";
 
-type TxType = "outcome" | "income" | "transfer";
+type TxType = "outcome" | "income" | "transfer" | "covering";
 
 /* ─── Context — any component in the tree can call open() ─── */
 type ModalCtx = { open: (type?: TxType) => void };
@@ -27,6 +27,10 @@ export function AddTransactionProvider({ children }: { children: ReactNode }) {
     };
   }, [isOpen]);
 
+  // Close only when a click both starts and ends on the dimmed backdrop, so
+  // selecting text inside a field and releasing on the backdrop won't close it.
+  const pressedBackdrop = useRef(false);
+
   return (
     <Ctx.Provider value={{ open: (type) => { setPreset(type ?? "outcome"); setIsOpen(true); } }}>
       {children}
@@ -35,7 +39,8 @@ export function AddTransactionProvider({ children }: { children: ReactNode }) {
         <div
           className="fixed inset-0 z-[90] flex items-stretch justify-end"
           style={{ background: "rgba(11,14,20,.5)" }}
-          onClick={() => setIsOpen(false)}
+          onMouseDown={(e) => { pressedBackdrop.current = e.target === e.currentTarget; }}
+          onMouseUp={(e) => { if (pressedBackdrop.current && e.target === e.currentTarget) setIsOpen(false); pressedBackdrop.current = false; }}
         >
           <aside
             role="dialog"

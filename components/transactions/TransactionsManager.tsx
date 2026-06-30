@@ -28,6 +28,8 @@ export function TransactionsManager({
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [catFilter, setCatFilter] = useState("");
   const [walletFilter, setWalletFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const allCats = useMemo(
     () => Array.from(new Set(transactions.map((t) => t.category))).sort(),
@@ -39,12 +41,14 @@ export function TransactionsManager({
     if (typeFilter !== "all") list = list.filter((t) => t.type === typeFilter);
     if (catFilter) list = list.filter((t) => t.category === catFilter);
     if (walletFilter) list = list.filter((t) => t.from_account_id === walletFilter || t.to_account_id === walletFilter);
+    if (dateFrom) list = list.filter((t) => t.transaction_date >= dateFrom);
+    if (dateTo) list = list.filter((t) => t.transaction_date <= dateTo);
     if (search) {
       const q = search.toLowerCase();
       list = list.filter((t) => (t.name ?? "").toLowerCase().includes(q) || t.category.toLowerCase().includes(q));
     }
     return list;
-  }, [transactions, typeFilter, catFilter, walletFilter, search]);
+  }, [transactions, typeFilter, catFilter, walletFilter, dateFrom, dateTo, search]);
 
   const net = useMemo(
     () => filtered.reduce((a, t) => a + (t.type === "income" ? toNumber(t.amount) : t.type === "outcome" ? -toNumber(t.amount) : 0), 0),
@@ -101,6 +105,15 @@ export function TransactionsManager({
           <option value="">All wallets</option>
           {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
+        <div className="flex items-center gap-1.5 rounded-[10px] px-[10px] py-[7px]" style={selectStyle}>
+          <span className="text-[11px]" style={{ color: "var(--faint)" }}>Date</span>
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="num border-none bg-transparent text-[12px] outline-none" style={{ color: "var(--text)" }} />
+          <span className="text-[11px]" style={{ color: "var(--faint)" }}>→</span>
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="num border-none bg-transparent text-[12px] outline-none" style={{ color: "var(--text)" }} />
+          {(dateFrom || dateTo) && (
+            <button type="button" onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-[12px]" style={{ color: "var(--muted)" }} aria-label="Clear date filter">✕</button>
+          )}
+        </div>
         <div className="flex-1" />
         <div className="flex gap-0.5 rounded-[10px] p-[3px]" style={{ background: "var(--soft)", border: "1px solid var(--border)" }}>
           {tabs.map((tab) => {

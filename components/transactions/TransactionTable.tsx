@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { ConfirmDeleteButton } from "@/components/ui/ConfirmDeleteButton";
 import { deleteTransaction, settleCovering } from "@/lib/actions/transactions";
 import { formatIDR } from "@/lib/formatters";
-import { categoryColor, txTypeMeta } from "@/lib/category-colors";
+import { amountStyle, categoryColor, txTypeMeta } from "@/lib/category-colors";
 import type { Account, Transaction } from "@/lib/types";
 
 const KNOWN_METHODS = ["QRIS", "Transfer", "Card", "VA", "Cash", "E-Money"];
@@ -72,8 +72,8 @@ export function TransactionTable({
                     </p>
                   </div>
                 </div>
-                <p className="num shrink-0 text-right text-[13px] font-bold" style={{ color: isCovering ? "#f59e0b" : meta.up ? "var(--up)" : "var(--text)" }}>
-                  −{formatIDR(t.amount)}
+                <p className="num shrink-0 text-right text-[13px] font-bold" style={{ color: amountStyle(t.type).color }}>
+                  {amountStyle(t.type).sign}{formatIDR(t.amount)}
                 </p>
               </div>
               <div className="mt-3 flex justify-end gap-2 pt-3" style={{ borderTop: "1px solid var(--hair)" }}>
@@ -155,7 +155,7 @@ export function TransactionTable({
                       )}
                     </td>
                     <td className="num px-2 py-[11px] text-right text-[11.5px]" style={{ color: "var(--faint)" }}>{Number(t.fee ?? 0) > 0 ? formatIDR(t.fee).replace("Rp", "").trim() : "—"}</td>
-                    <td className="num px-2 py-[11px] text-right text-[13px] font-semibold" style={{ color: isCovering ? "#f59e0b" : meta.up ? "var(--up)" : "var(--text)" }}>−{formatIDR(t.amount)}</td>
+                    <td className="num px-2 py-[11px] text-right text-[13px] font-semibold" style={{ color: amountStyle(t.type).color }}>{amountStyle(t.type).sign}{formatIDR(t.amount)}</td>
                     <td className="px-2 py-[11px] pr-[18px] text-right">
                       <div className="flex justify-end gap-1.5 opacity-0 transition group-hover:opacity-100">
                         {!isCovering && (

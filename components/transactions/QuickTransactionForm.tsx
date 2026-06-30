@@ -6,11 +6,13 @@ import { toast } from "sonner";
 import { upsertTransaction } from "@/lib/actions/transactions";
 import { typedZodResolver } from "@/lib/form-resolver";
 import { transactionSchema } from "@/lib/validations";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { formatIDR } from "@/lib/formatters";
 import type { Account } from "@/lib/types";
 import type { z } from "zod";
 
 type Values = z.infer<typeof transactionSchema>;
-type TxType = "outcome" | "income" | "transfer";
+type TxType = "outcome" | "income" | "transfer" | "covering";
 
 const today = new Date().toISOString().slice(0, 10);
 const METHODS = ["QRIS", "Transfer", "Card", "VA", "Cash", "E-Money"];
@@ -25,7 +27,9 @@ function emptyValues(cat: string, type: TxType): Values {
     from_account_id: null,
     to_account_id: null,
     transaction_date: today,
-    notes: ""
+    notes: "",
+    covered_for: "",
+    my_expense: 0
   };
 }
 
@@ -69,15 +73,22 @@ export function QuickTransactionForm({
 
   const type = (useWatch({ control, name: "type" }) ?? presetType) as TxType;
   const isMove = type === "transfer";
+  const isCover = type === "covering";
   const feeLabel = isMove ? "Transfer fee" : type === "income" ? "Admin fee" : "Fee / tax";
 
   const walletField = type === "income" ? "to_account_id" : "from_account_id";
+
+  const amountVal = useWatch({ control, name: "amount" }) ?? 0;
+  const feeVal = useWatch({ control, name: "fee" }) ?? 0;
+  const myExpenseVal = useWatch({ control, name: "my_expense" }) ?? 0;
+  const loanPortion = Math.max(Number(amountVal) - Number(myExpenseVal), 0);
 
   const segments = useMemo(
     () => [
       { t: "outcome" as const, label: "Expense", activeBg: "var(--down)" },
       { t: "income" as const, label: "Income", activeBg: "var(--up)" },
-      { t: "transfer" as const, label: "Move Money", activeBg: "var(--ink)" }
+      { t: "transfer" as const, label: "Move", activeBg: "var(--ink)" },
+      { t: "covering" as const, label: "Cover Bill", activeBg: "#f59e0b" }
     ],
     []
   );
@@ -132,14 +143,40 @@ export function QuickTransactionForm({
             <input type="date" {...register("transaction_date")} className={`num ${field}`} style={fieldStyle} />
           </div>
           <div>
-            <div className={lbl}>Amount</div>
+            <div className={lbl}>{isCover ? "Total bill" : "Amount"}</div>
             <div className="flex items-center gap-1.5 rounded-[10px] px-[11px] py-[9px]" style={fieldStyle}>
               <span className="num text-[12px]" style={{ color: "var(--muted)" }}>Rp</span>
-              <input type="number" min="0" step="any" inputMode="numeric" {...register("amount")} placeholder="50000" className="num w-full border-none bg-transparent text-[12.5px] outline-none" style={{ color: "var(--text)" }} />
+              <CurrencyInput value={amountVal} onValueChange={(n) => setValue("amount", n, { shouldValidate: true })} placeholder="50.000" className="num w-full border-none bg-transparent text-[12.5px] outline-none" style={{ color: "var(--text)" }} />
             </div>
             {errors.amount && <span className="text-[11px]" style={{ color: "var(--down)" }}>{errors.amount.message}</span>}
           </div>
         </div>
+
+        {/* Cover Bill: who + my share, with the reimbursable loan computed live */}
+        {isCover && (
+          <div className="mb-3.5 rounded-[12px] p-3" style={{ background: "#f59e0b14", border: "1px solid #f59e0b44" }}>
+            <div className="mb-3 grid grid-cols-2 gap-3">
+              <div>
+                <div className={lbl}>Covered for (who)</div>
+                <input {...register("covered_for")} placeholder="e.g. Budi, Team" className={field} style={fieldStyle} />
+                {errors.covered_for && <span className="text-[11px]" style={{ color: "var(--down)" }}>{errors.covered_for.message}</span>}
+              </div>
+              <div>
+                <div className={lbl}>My share (expense)</div>
+                <div className="flex items-center gap-1.5 rounded-[10px] px-[11px] py-[9px]" style={fieldStyle}>
+                  <span className="num text-[12px]" style={{ color: "var(--muted)" }}>Rp</span>
+                  <CurrencyInput value={myExpenseVal} onValueChange={(n) => setValue("my_expense", n, { shouldValidate: true })} placeholder="0" className="num w-full border-none bg-transparent text-[12.5px] outline-none" style={{ color: "var(--text)" }} />
+                </div>
+                {errors.my_expense && <span className="text-[11px]" style={{ color: "var(--down)" }}>{errors.my_expense.message}</span>}
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-[11.5px]">
+              <span style={{ color: "var(--muted)" }}>Reimbursable (loan to others)</span>
+              <span className="num font-bold" style={{ color: "#f59e0b" }}>{formatIDR(loanPortion)}</span>
+            </div>
+            <p className="mt-1.5 text-[10.5px]" style={{ color: "var(--faint)" }}>Your share is recorded as an expense. The reimbursable part is a loan — not counted as your expense — and you can mark it settled when paid back.</p>
+          </div>
+        )}
 
         {/* Move: from + to */}
         {isMove && (
@@ -186,7 +223,7 @@ export function QuickTransactionForm({
             <div className={lbl}>{feeLabel}</div>
             <div className="flex items-center gap-1.5 rounded-[10px] px-[11px] py-[9px]" style={fieldStyle}>
               <span className="num text-[12px]" style={{ color: "var(--muted)" }}>Rp</span>
-              <input type="number" min="0" step="any" inputMode="numeric" {...register("fee")} placeholder="0" className="num w-full border-none bg-transparent text-[12.5px] outline-none" style={{ color: "var(--text)" }} />
+              <CurrencyInput value={feeVal} onValueChange={(n) => setValue("fee", n, { shouldValidate: true })} placeholder="0" className="num w-full border-none bg-transparent text-[12.5px] outline-none" style={{ color: "var(--text)" }} />
             </div>
           </div>
           <div>
