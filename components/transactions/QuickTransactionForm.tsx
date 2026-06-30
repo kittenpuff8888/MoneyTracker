@@ -8,7 +8,7 @@ import { typedZodResolver } from "@/lib/form-resolver";
 import { transactionSchema } from "@/lib/validations";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { formatIDR } from "@/lib/formatters";
-import type { Account } from "@/lib/types";
+import type { Account, Transaction } from "@/lib/types";
 import type { z } from "zod";
 
 type Values = z.infer<typeof transactionSchema>;
@@ -33,6 +33,32 @@ function emptyValues(cat: string, type: TxType): Values {
   };
 }
 
+// Notes are stored as "METHOD · rest". Split them back apart for editing.
+function splitNotes(notes: string | null): { method: string; rest: string } {
+  if (!notes) return { method: "QRIS", rest: "" };
+  const [head, ...tail] = notes.split("·");
+  const first = head.trim();
+  if (METHODS.includes(first)) return { method: first, rest: tail.join("·").trim() };
+  return { method: "QRIS", rest: notes };
+}
+
+function valuesFromTx(tx: Transaction): Values {
+  return {
+    id: tx.id,
+    type: tx.type as TxType,
+    name: tx.name ?? "",
+    amount: Number(tx.amount ?? 0),
+    fee: Number(tx.fee ?? 0),
+    category: tx.category,
+    from_account_id: tx.from_account_id,
+    to_account_id: tx.to_account_id,
+    transaction_date: tx.transaction_date,
+    notes: splitNotes(tx.notes).rest,
+    covered_for: tx.covered_for ?? "",
+    my_expense: 0
+  };
+}
+
 const lbl = "mb-1.5 text-[11.5px] font-semibold";
 const field =
   "w-full rounded-[10px] px-[11px] py-[10px] text-[13px] outline-none";
@@ -40,16 +66,19 @@ const fieldStyle = { background: "var(--panel)", border: "1px solid var(--border
 
 export function QuickTransactionForm({
   presetType = "outcome",
+  transaction,
   onSaved,
   onCancel
 }: {
   presetType?: TxType;
+  transaction?: Transaction | null;
   onSaved?: () => void;
   onCancel?: () => void;
 }) {
+  const isEdit = Boolean(transaction);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [method, setMethod] = useState("QRIS");
+  const [method, setMethod] = useState(() => splitNotes(transaction?.notes ?? null).method);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -64,12 +93,21 @@ export function QuickTransactionForm({
 
   const { register, handleSubmit, control, reset, setValue, formState: { errors } } = useForm<Values>({
     resolver: typedZodResolver<Values>(transactionSchema),
-    defaultValues: emptyValues("Other", presetType)
+    defaultValues: transaction ? valuesFromTx(transaction) : emptyValues("Other", presetType)
   });
 
+  // When editing a specific transaction, load its values into the form.
   useEffect(() => {
-    if (categories.length > 0) setValue("category", categories[0]);
-  }, [categories, setValue]);
+    if (transaction) {
+      reset(valuesFromTx(transaction));
+      setMethod(splitNotes(transaction.notes).method);
+    }
+  }, [transaction, reset]);
+
+  useEffect(() => {
+    // Only default the category for brand-new transactions.
+    if (!isEdit && categories.length > 0) setValue("category", categories[0]);
+  }, [categories, setValue, isEdit]);
 
   const type = (useWatch({ control, name: "type" }) ?? presetType) as TxType;
   const isMove = type === "transfer";
@@ -96,13 +134,14 @@ export function QuickTransactionForm({
   function onSubmit(values: Values) {
     const payload: Values = {
       ...values,
+      id: transaction?.id,
       notes: method ? `${method}${values.notes ? ` · ${values.notes}` : ""}` : values.notes
     };
     startTransition(async () => {
       try {
         await upsertTransaction(payload);
-        reset(emptyValues(categories[0] ?? "Other", type));
-        toast.success("Transaction added.");
+        if (!isEdit) reset(emptyValues(categories[0] ?? "Other", type));
+        toast.success(isEdit ? "Transaction updated." : "Transaction added.");
         onSaved?.();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Unable to save transaction.");
@@ -255,7 +294,7 @@ export function QuickTransactionForm({
             className="rounded-[10px] px-[18px] py-2.5 text-[13px] font-semibold transition hover:opacity-90 disabled:opacity-50"
             style={{ background: "var(--ink)", color: "var(--panel)" }}
           >
-            {accounts.length === 0 ? "Add a wallet first" : pending ? "Saving…" : "Save Transaction"}
+            {accounts.length === 0 ? "Add a wallet first" : pending ? "Saving…" : isEdit ? "Save Changes" : "Save Transaction"}
           </button>
         </div>
       </div>

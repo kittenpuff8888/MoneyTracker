@@ -9,7 +9,7 @@ import { formatIDR } from "@/lib/formatters";
 import { calculateNetBalance, calculateWalletRollup } from "@/lib/calculations";
 import type { Account, Transaction } from "@/lib/types";
 
-const TYPE_ORDER = ["Bank", "Cash", "E-wallet", "E-Money", "Investment", "Savings", "Other"];
+const TYPE_ORDER = ["Bank", "Cash", "E-Wallet", "E-Money", "Investment", "Savings", "Other"];
 
 function compact(n: number) {
   const a = Math.abs(n);

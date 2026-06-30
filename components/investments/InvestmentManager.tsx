@@ -47,11 +47,11 @@ export function InvestmentManager({ wallets, trades }: { wallets: Account[]; tra
   }, [trades, tab, walletFilter, query]);
 
   const summary = [
-    { label: "Trading Balance", value: `Rp ${id(tradingBalance)}`, color: "var(--text)", align: "left" as const },
-    { label: "Realized P&L", value: rp(totalRealizedPnl), color: totalRealizedPnl >= 0 ? "var(--up)" : "var(--down)", align: "center" as const },
-    { label: "Cumulative Return", value: `${cumulativeReturn >= 0 ? "+" : ""}${cumulativeReturn.toFixed(2)}%`, color: cumulativeReturn >= 0 ? "var(--up)" : "var(--down)", align: "center" as const },
-    { label: "Win Rate", value: `${winRate.toFixed(0)}%`, color: "var(--text)", align: "center" as const },
-    { label: "Open Positions", value: String(openTrades.length), color: "var(--text)", align: "right" as const }
+    { label: "Trading Balance", value: `Rp ${id(tradingBalance)}`, color: "var(--text)" },
+    { label: "Realized P&L", value: rp(totalRealizedPnl), color: totalRealizedPnl >= 0 ? "var(--up)" : "var(--down)" },
+    { label: "Cumulative Return", value: `${cumulativeReturn >= 0 ? "+" : ""}${cumulativeReturn.toFixed(2)}%`, color: cumulativeReturn >= 0 ? "var(--up)" : "var(--down)" },
+    { label: "Win Rate", value: `${winRate.toFixed(0)}%`, color: "var(--text)" },
+    { label: "Open Positions", value: String(openTrades.length), color: "var(--text)" }
   ];
 
   const selectStyle = { background: "var(--panel)", border: "1px solid var(--border)", color: "var(--text)", boxShadow: "var(--sh)" };
@@ -79,7 +79,7 @@ export function InvestmentManager({ wallets, trades }: { wallets: Account[]; tra
       {/* Summary strip */}
       <div className="mb-4 grid grid-cols-2 overflow-hidden md:grid-cols-5" style={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: "var(--r)", boxShadow: "var(--sh)" }}>
         {summary.map((s) => (
-          <div key={s.label} className="px-4 py-[15px]" style={{ borderRight: "1px solid var(--hair)", textAlign: s.align }}>
+          <div key={s.label} className="px-4 py-[15px] text-left" style={{ borderRight: "1px solid var(--hair)" }}>
             <div className="num-balance num text-[17px] font-semibold" style={{ color: s.color }}>{s.value}</div>
             <div className="mt-[3px] text-[11px]" style={{ color: "var(--muted)" }}>{s.label}</div>
           </div>

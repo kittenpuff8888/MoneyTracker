@@ -3,8 +3,6 @@
 import { useMemo, useState } from "react";
 import { useAddTransaction } from "@/components/transactions/AddTransactionModal";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Modal } from "@/components/ui/Modal";
-import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransactionTable } from "@/components/transactions/TransactionTable";
 import { formatIDR } from "@/lib/formatters";
 import { toNumber } from "@/lib/calculations";
@@ -14,16 +12,13 @@ type TypeFilter = "all" | "income" | "outcome" | "transfer";
 
 export function TransactionsManager({
   accounts,
-  transactions,
-  categories
+  transactions
 }: {
   accounts: Account[];
   transactions: Transaction[];
   categories?: string[];
 }) {
-  const { open } = useAddTransaction();
-  const [editing, setEditing] = useState<Transaction | null>(null);
-  const [editOpen, setEditOpen] = useState(false);
+  const { open, edit } = useAddTransaction();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [catFilter, setCatFilter] = useState("");
@@ -133,10 +128,6 @@ export function TransactionsManager({
         </div>
       </div>
 
-      <Modal open={editOpen} title="Edit Transaction" onClose={() => { setEditOpen(false); setEditing(null); }}>
-        <TransactionForm accounts={accounts} transaction={editing} categories={categories} onSaved={() => { setEditOpen(false); setEditing(null); }} />
-      </Modal>
-
       {filtered.length === 0 ? (
         transactions.length === 0 ? (
           <EmptyState title="No transactions yet." description="Start by adding income, expense, or a move." />
@@ -144,7 +135,7 @@ export function TransactionsManager({
           <EmptyState title="No results." description="Try adjusting your filters." />
         )
       ) : (
-        <TransactionTable transactions={filtered} accounts={accounts} onEdit={(t) => { setEditing(t); setEditOpen(true); }} />
+        <TransactionTable transactions={filtered} accounts={accounts} onEdit={(t) => edit(t)} />
       )}
     </section>
   );

@@ -12,7 +12,7 @@ import type { z } from "zod";
 
 type AccountFormValues = z.infer<typeof accountSchema>;
 
-const WALLET_TYPES: AccountFormValues["type"][] = ["Bank", "Cash", "E-wallet", "E-Money", "Investment", "Savings", "Other"];
+const WALLET_TYPES: AccountFormValues["type"][] = ["Bank", "Cash", "E-Wallet", "E-Money", "Investment", "Savings", "Other"];
 const COLORS = ["#2563eb", "#e5484d", "#0b0e14", "#0e7490", "#7c3aed", "#16a34a", "#db2777", "#f59e0b"];
 
 function defaults(account?: Account | null): AccountFormValues {

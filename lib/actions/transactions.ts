@@ -85,6 +85,26 @@ export async function upsertTransaction(input: unknown) {
     return;
   }
 
+  // Transfer fee → its own "Fee" expense so it counts as spending, while the
+  // move itself stays a plain Move Money entry (fee not bundled into it).
+  if (parsed.type === "transfer" && !parsed.id && (parsed.fee ?? 0) > 0) {
+    const from = parsed.from_account_id ?? null;
+    await applyOne(supabase, user.id, {
+      type: "transfer", amount: parsed.amount, fee: 0, category: "Move Money",
+      from, to: parsed.to_account_id ?? null, date: parsed.transaction_date,
+      notes: parsed.notes ?? null, name: parsed.name
+    });
+    await applyOne(supabase, user.id, {
+      type: "outcome", amount: parsed.fee ?? 0, fee: 0, category: "Fee",
+      from, date: parsed.transaction_date, notes: parsed.notes ?? null,
+      name: parsed.name ? `${parsed.name} (transfer fee)` : "Transfer fee"
+    });
+    revalidatePath("/transactions");
+    revalidatePath("/dashboard");
+    revalidatePath("/accounts");
+    return;
+  }
+
   // Move Money keeps its own category and never lands in expense analytics.
   const category =
     parsed.type === "transfer" ? "Move Money"

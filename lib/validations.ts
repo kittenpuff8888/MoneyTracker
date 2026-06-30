@@ -5,7 +5,7 @@ const optionalUuid = z.string().uuid().optional().nullable().or(z.literal("").tr
 export const accountSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(2, "Name is required"),
-  type: z.enum(["Bank", "Cash", "E-wallet", "E-Money", "Investment", "Savings", "Other"]),
+  type: z.enum(["Bank", "Cash", "E-Wallet", "E-Money", "Investment", "Savings", "Other"]),
   starting_balance: z.coerce.number().min(0),
   current_balance: z.coerce.number().min(0),
   color: z.string().optional().nullable(),

@@ -4,7 +4,7 @@ export type TransactionType = "income" | "outcome" | "transfer" | "covering";
 export type AccountType =
   | "Bank"
   | "Cash"
-  | "E-wallet"
+  | "E-Wallet"
   | "E-Money"
   | "Investment"
   | "Savings"
